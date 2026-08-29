@@ -3,7 +3,7 @@ export default function Home() {
     <main className="site-shell">
       <iframe
         className="tracker-frame"
-        src="/tracker.html?v=5"
+        src="/tracker.html?v=6"
         title="Журнал поиска амортизирующих сандалий"
       />
     </main>
