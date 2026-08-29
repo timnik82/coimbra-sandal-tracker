@@ -75,6 +75,30 @@
       font: 700 .72rem/1 ui-monospace, SFMono-Regular, Menlo, monospace;
       letter-spacing: .03em;
     }
+    .header-actions { display: flex; align-items: center; gap: 8px; }
+    .account-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 26px;
+      padding: 4px 8px;
+      border: 1px solid #acd5c7;
+      border-radius: 999px;
+      background: #edf8f3;
+      color: var(--green);
+      font: 750 .69rem/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+      white-space: nowrap;
+    }
+    .account-status::before {
+      content: "";
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+      box-shadow: 0 0 0 3px rgba(35,121,91,.1);
+    }
+    .account-status[data-state="saving"] { color: var(--blue); border-color: #a9dbe4; background: #eef8fb; }
+    .account-status[data-state="local"] { color: var(--muted); border-color: var(--line); background: white; }
     .header-setting select {
       min-height: 26px;
       padding: 2px 24px 2px 7px;
@@ -127,7 +151,16 @@
     }
     .toolbar button:hover { border-color: var(--blue); }
     .count { margin-left: auto; color: var(--muted); font-size: .875rem; }
-    .sync-status { color: var(--green); font-size: .78rem; font-weight: 750; }
+    .search-journal { margin: 0 0 20px; border: 1px solid var(--line); border-radius: 14px; background: rgba(255,255,255,.72); }
+    .search-journal summary { display: flex; align-items: center; gap: 10px; padding: 11px 14px; cursor: pointer; color: var(--blue-dark); font-weight: 800; }
+    .search-journal summary::marker { color: var(--blue); }
+    .journal-count { margin-left: auto; color: var(--muted); font-size: .75rem; font-weight: 650; }
+    .journal-list { display: grid; gap: 0; margin: 0; padding: 0 14px 12px; list-style: none; }
+    .journal-entry { display: grid; grid-template-columns: 92px 105px 1fr; gap: 10px; padding: 11px 0; border-top: 1px solid var(--line); }
+    .journal-date, .journal-connector { color: var(--muted); font: 750 .72rem/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .journal-query { color: #40545f; line-height: 1.42; }
+    .journal-query strong { display: block; margin-bottom: 2px; color: var(--ink); }
+    .journal-reason { display: block; margin-top: 4px; color: #7b5543; font-size: .82rem; }
 
     .legend { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; }
     .pill { display: inline-flex; align-items: center; gap: 6px; padding: 5px 9px; border-radius: 999px; font-size: .75rem; font-weight: 750; }
@@ -259,6 +292,10 @@
       header { padding-top: 34px; }
       .header-topline { align-items: flex-start; }
       .header-setting > span { display: none; }
+      .header-actions { align-items: flex-end; flex-direction: column-reverse; }
+      .account-status { font-size: .63rem; }
+      .journal-entry { grid-template-columns: 1fr 1fr; }
+      .journal-query { grid-column: 1 / -1; }
       .grid { grid-template-columns: 1fr; }
       .count { width: 100%; margin-left: 0; }
       .foam-rule { grid-template-columns: 1fr; }
@@ -275,15 +312,18 @@
   <header class="wrap">
     <div class="header-topline">
       <p class="eyebrow">Coimbra · EU 46–47 · цель до €100</p>
-      <label class="header-setting" for="fontScale">
-        <span>Текст</span>
-        <select id="fontScale" aria-label="Размер текста">
-          <option value="13">Мелкий</option>
-          <option value="14" selected>Компактный</option>
-          <option value="16">Обычный</option>
-          <option value="18">Крупный</option>
-        </select>
-      </label>
+      <div class="header-actions">
+        <span class="account-status" id="syncStatus" data-state="local" role="status">Личный аккаунт · локально</span>
+        <label class="header-setting" for="fontScale">
+          <span>Текст</span>
+          <select id="fontScale" aria-label="Размер текста">
+            <option value="13">Мелкий</option>
+            <option value="14" selected>Компактный</option>
+            <option value="16">Обычный</option>
+            <option value="18">Крупный</option>
+          </select>
+        </label>
+      </div>
     </div>
     <h1>Не потерять хорошую пару</h1>
     <p class="intro">Все модели из текущего поиска — вместе с тем, что уже известно, что ещё проверить и почему некоторые варианты исключены.</p>
@@ -318,9 +358,13 @@
       <button id="interestOnly" type="button" aria-pressed="false">☆ Только интересные</button>
       <button id="exportBtn" type="button">Экспорт заметок</button>
       <button id="resetBtn" type="button">Сбросить отметки</button>
-      <span class="sync-status" id="syncStatus">Локально</span>
       <span class="count" id="count"></span>
     </div>
+
+    <details class="search-journal">
+      <summary>Журнал поисков <span class="journal-count" id="journalCount"></span></summary>
+      <ol class="journal-list" id="journalList"></ol>
+    </details>
 
     <div class="legend" aria-label="Легенда">
       <span class="pill strong">Подтверждённая сильная пена</span>
@@ -422,6 +466,33 @@
       }
     ];
 
+    const searchLog = [
+      {
+        date: "29.08.2026", connector: "Exa",
+        query: "Закрытые мужские сандалии EU 46–47 с полноценной пенной midsole до €100",
+        result: "Найдены HOKA Hopara 2, Salomon Techamphibian 5 и несколько моделей с проверяемой амортизацией.",
+        rejected: "Отсеивались варианты без подтверждённой промежуточной подошвы и без фиксации пятки."
+      },
+      {
+        date: "29.08.2026", connector: "Parallel",
+        query: "Альтернативы HOKA: закрытый нос, задняя фиксация, офисно допустимый вид, размеры 46–47",
+        result: "Добавлены KEEN Hyperport, Pagonis, Geox, Jerusalem Sandals, Quiksilver и Satorisan.",
+        rejected: "Основная причина отказа — мягкая стелька без доказанной ударопоглощающей midsole; часть моделей открыта или дороже бюджета."
+      },
+      {
+        date: "29.08.2026", connector: "You.com",
+        query: "Проверка амортизации и наличия закрытых sandal / amphibious моделей больших размеров в Европе",
+        result: "Проверены независимые данные и уточнены требования к толщине и материалу подошвы.",
+        rejected: "Маркетинговые слова cushioned и comfort не принимались без сведений о пене или независимого теста."
+      },
+      {
+        date: "29.08.2026", connector: "Web + магазины",
+        query: "Где примерить подходящие модели в Коимбре до покупки",
+        result: "Проверялись локальные магазины и европейские продавцы с нужными размерами.",
+        rejected: "Не подтверждённые остатки 46–47 и магазины без удобной примерки оставлены как задачи для повторной проверки."
+      }
+    ];
+
     const STORE = "coimbra-sandal-tracker-v1";
     const saved = JSON.parse(localStorage.getItem(STORE) || "{}");
     const state = { ...saved };
@@ -440,6 +511,16 @@
     document.documentElement.style.fontSize = `${savedFontScale}px`;
 
     const esc = (text) => String(text ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
+    const setSyncStatus = (label, mode = "online") => {
+      syncStatus.textContent = `Личный аккаунт · ${label}`;
+      syncStatus.dataset.state = mode;
+    };
+    document.getElementById("journalCount").textContent = `${searchLog.length} запуска`;
+    document.getElementById("journalList").innerHTML = searchLog.map(entry => `<li class="journal-entry">
+      <span class="journal-date">${esc(entry.date)}</span>
+      <span class="journal-connector">${esc(entry.connector)}</span>
+      <span class="journal-query"><strong>${esc(entry.query)}</strong>${esc(entry.result)}<span class="journal-reason">Отсев: ${esc(entry.rejected)}</span></span>
+    </li>`).join("");
     const preferences = () => ({
       archive: archiveFilter.value,
       tier: tierFilter.value,
@@ -449,16 +530,16 @@
     });
     const saveRemote = async () => {
       if (!location.protocol.startsWith("http")) return;
-      syncStatus.textContent = "Сохраняю…";
+      setSyncStatus("сохраняю…", "saving");
       try {
         const response = await fetch("/api/state", {
           method: "PUT",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ items: state, preferences: preferences() })
         });
-        syncStatus.textContent = response.ok ? "Сохранено" : "Только локально";
+        response.ok ? setSyncStatus("синхронизировано") : setSyncStatus("только локально", "local");
       } catch {
-        syncStatus.textContent = "Только локально";
+        setSyncStatus("только локально", "local");
       }
     };
     const persist = () => {
@@ -588,7 +669,7 @@
 
     async function loadRemote() {
       if (!location.protocol.startsWith("http")) return;
-      syncStatus.textContent = "Синхронизация…";
+      setSyncStatus("подключаю…", "saving");
       try {
         const response = await fetch("/api/state");
         if (!response.ok) throw new Error("sync unavailable");
@@ -607,14 +688,14 @@
             document.documentElement.style.fontSize = `${fontScale.value}px`;
           }
           localStorage.setItem(STORE, JSON.stringify(state));
-          syncStatus.textContent = "Синхронизировано";
+          setSyncStatus("синхронизировано");
           render();
         } else {
-          syncStatus.textContent = "Сохранено";
+          setSyncStatus("синхронизировано");
           persist();
         }
       } catch {
-        syncStatus.textContent = "Только локально";
+        setSyncStatus("только локально", "local");
       }
     }
 

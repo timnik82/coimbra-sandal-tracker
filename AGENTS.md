@@ -13,6 +13,9 @@ Before starting any new sandal search:
 5. Keep the strict product requirement: a closed or strongly protected toe,
    secure heel retention, and a verified foam midsole with meaningful impact
    absorption. A padded footbed alone is insufficient.
+6. Append every meaningful search run to the `searchLog` array in
+   `public/tracker.html`: use the actual date, connector/source, a concise query
+   summary, what the run added or confirmed, and the rejection rule applied.
 
 User-specific notes, favourites, filters, statuses, and archive flags are stored
 in D1 through `/api/state`. Browser storage is fallback-only.
