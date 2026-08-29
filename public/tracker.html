@@ -687,6 +687,7 @@
     let compareIds = [];
     let localRevision = 0;
     let remoteSaveTimer;
+    let remoteSaveQueue = Promise.resolve();
 
     const sizeStatuses = ["in_stock", "size_exists", "out_of_stock", "unknown"];
     const deliveryStatuses = ["confirmed", "unavailable", "unknown"];
@@ -808,19 +809,22 @@
       compareIds: normaliseCompareIds(compareIds),
       fontScale: fontScale.value
     });
-    const saveRemote = async () => {
-      if (!location.protocol.startsWith("http")) return;
-      setSyncStatus("сохраняю…", "saving");
-      try {
-        const response = await fetch("/api/state", {
-          method: "PUT",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ items: state, preferences: preferences() })
-        });
-        response.ok ? setSyncStatus("синхронизировано") : setSyncStatus("только локально", "local");
-      } catch {
-        setSyncStatus("только локально", "local");
-      }
+    const saveRemote = () => {
+      if (!location.protocol.startsWith("http")) return Promise.resolve();
+      remoteSaveQueue = remoteSaveQueue.then(async () => {
+        setSyncStatus("сохраняю…", "saving");
+        try {
+          const response = await fetch("/api/state", {
+            method: "PUT",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ items: state, preferences: preferences() })
+          });
+          response.ok ? setSyncStatus("синхронизировано") : setSyncStatus("только локально", "local");
+        } catch {
+          setSyncStatus("только локально", "local");
+        }
+      });
+      return remoteSaveQueue;
     };
     const persist = () => {
       localRevision += 1;
@@ -1030,8 +1034,6 @@
         if (!response.ok) throw new Error("sync unavailable");
         const payload = await response.json();
         if (localRevision !== revisionAtRequest) {
-          clearTimeout(remoteSaveTimer);
-          await saveRemote();
           return;
         }
         if (payload.data?.items) {
