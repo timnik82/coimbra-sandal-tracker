@@ -462,6 +462,51 @@
         id: "satorisan-benirras", name: "Satorisan Benirras", tier: "rejected", level: "Исключено", price: "€140", sizes: "46 / 47", rank: 15,
         facts: ["Закрытая летняя конструкция и cushioned footbed", "Полноценная ударопоглощающая midsole не подтверждена"],
         warning: "Выше бюджета и недостаточно доказательств амортизации.", url: "https://eu.satorisan.com/collections/sandalias-cerradas-hombre", source: "Parallel"
+      },
+      {
+        id: "rieker-25051", name: "Rieker 25051", tier: "rejected", level: "Архив", price: "ориентир €45–75", sizes: "до 46–47 в линейке", rank: 16,
+        facts: ["Закрытая fisherman-конструкция встречалась в раннем поиске", "Точный европейский продавец и полноценная пенная midsole не подтверждены"],
+        warning: "Архивировано до появления проверяемой карточки с амортизацией и доставкой в Португалию.", source: "Parallel · ранний поиск"
+      },
+      {
+        id: "rieker-26761", name: "Rieker 26761", tier: "rejected", level: "Архив", price: "ориентир €45–75", sizes: "до 46–47 в линейке", rank: 17,
+        facts: ["Упоминалась среди закрытых comfort-сандалий", "Наличие нужного размера и технология амортизации не были подтверждены"],
+        warning: "Не возвращать в основной список без прямой товарной страницы и доказательства пенной midsole.", source: "Parallel · ранний поиск"
+      },
+      {
+        id: "rieker-21190", name: "Rieker 21190", tier: "rejected", level: "Архив", price: "ориентир €45–75", sizes: "до 46–47 в линейке", rank: 18,
+        facts: ["Модель была названа в расширенном поиске comfort-брендов", "Подтверждённого предложения с доставкой в Коимбру найдено не было"],
+        warning: "Архивировано как непроверенный кандидат, а не как подходящая покупка.", source: "Parallel · ранний поиск"
+      },
+      {
+        id: "josef-seibel-max-74", name: "Josef Seibel Max 74", tier: "rejected", level: "Архив", price: "выше €100 в найденных предложениях", sizes: "46 / 47 существуют", rank: 19,
+        facts: ["Закрытая рыбацкая конструкция и comfort-позиционирование", "Найденные предложения были американскими или выше бюджета"],
+        warning: "Архивировано: нет подходящего европейского предложения и независимого подтверждения амортизации.", source: "Parallel · ранний поиск"
+      },
+      {
+        id: "josef-seibel-emeric-10", name: "Josef Seibel Emeric 10", tier: "rejected", level: "Архив", price: "выше €100 в найденных предложениях", sizes: "46 / 47 существуют", rank: 20,
+        facts: ["Фиксация пятки и закрытая comfort-конструкция", "Нужные размеры встречались только в неподходящих по географии или цене предложениях"],
+        warning: "Архивировано до появления предложения в ЕС до €100 с доказанной амортизацией.", source: "Parallel · ранний поиск"
+      },
+      {
+        id: "el-naturalista-tabernas", name: "El Naturalista Tabernas", tier: "rejected", level: "Архив", price: "не подтверждена", sizes: "46 / 47 не подтверждены", rank: 21,
+        facts: ["Проверялась как менее спортивная закрытая альтернатива", "Поиск не подтвердил одновременно размер, цену и полноценную амортизирующую подошву"],
+        warning: "Архивировано как неподтверждённый результат расширенного поиска.", source: "Parallel · расширенный поиск"
+      },
+      {
+        id: "columbia-peakfreak-rush", name: "Columbia Peakfreak Rush", tier: "rejected", level: "Архив", price: "не подтверждена", sizes: "46 / 47 не подтверждены", rank: 22,
+        facts: ["Рассматривалась как закрытая гибридная outdoor-модель", "Подходящая карточка с задней фиксацией, размером и ценой не была подтверждена"],
+        warning: "Архивировано, чтобы будущий поиск не принимал название модели за уже проверенную покупку.", source: "Parallel · расширенный поиск"
+      },
+      {
+        id: "ecco-biom-raft", name: "ECCO BIOM Raft", tier: "rejected", level: "Архив", price: "не подтверждена", sizes: "46 / 47 не подтверждены", rank: 23,
+        facts: ["Попала в поиск как амфибийная модель ECCO", "Не удалось подтвердить актуальное предложение, нужные размеры и обязательную амортизацию"],
+        warning: "Архивировано до появления точной европейской товарной страницы.", source: "Exa · расширенный поиск"
+      },
+      {
+        id: "keen-uneek", name: "KEEN Uneek", tier: "rejected", level: "Архив", price: "не проверялась как покупка", sizes: "46 встречался локально", rank: 24,
+        facts: ["Предлагалась в Sportino Coimbra только для примерки колодки KEEN", "Подошва менее мягкая, чем у Hyperport; это не основной кандидат"],
+        warning: "Архивировано как сравнительная модель для примерки, а не рекомендация к покупке.", source: "Локальный поиск · Sportino Coimbra"
       }
     ];
 
@@ -504,6 +549,18 @@
     const syncStatus = document.getElementById("syncStatus");
     let onlyInteresting = false;
     let remoteSaveTimer;
+
+    const defaultItem = product => ({
+      status: "unseen",
+      interest: false,
+      note: "",
+      archived: product.tier === "rejected"
+    });
+    const applyCatalogDefaults = () => products.forEach(product => {
+      if (!state[product.id]) state[product.id] = defaultItem(product);
+      else if (product.tier === "rejected" && state[product.id].archived === undefined) state[product.id].archived = true;
+    });
+    applyCatalogDefaults();
 
     const savedFontScale = localStorage.getItem("coimbra-sandal-font-scale") || "14";
     fontScale.value = savedFontScale;
@@ -554,14 +611,14 @@
       const status = statusFilter.value;
       const archive = archiveFilter.value;
       const visible = products.filter(p => {
-        const item = state[p.id] || { status: "unseen", interest: false, note: "" };
+        const item = state[p.id] || defaultItem(p);
         const tierOk = tier === "all" || (tier === "active" ? p.tier !== "rejected" : p.tier === tier);
         const archiveOk = archive === "all" || (archive === "archived" ? item.archived : !item.archived);
         return archiveOk && tierOk && (status === "all" || item.status === status) && (!onlyInteresting || item.interest);
       });
 
       grid.innerHTML = visible.map(p => {
-        const item = state[p.id] || { status: "unseen", interest: false, note: "" };
+        const item = state[p.id] || defaultItem(p);
         const expanded = Boolean(item.expanded);
         return `<article class="card" data-id="${p.id}" data-tier="${p.tier}" data-interest="${Boolean(item.interest)}" data-expanded="${expanded}" style="--level-color:${tierColor(p.tier)}">
           <div class="card-header">
@@ -605,7 +662,8 @@
     function bindCards() {
       document.querySelectorAll(".card").forEach(card => {
         const id = card.dataset.id;
-        state[id] ||= { status: "unseen", interest: false, note: "" };
+        const product = products.find(p => p.id === id);
+        state[id] ||= defaultItem(product);
         card.querySelector(".card-toggle").addEventListener("click", e => {
           state[id].expanded = !state[id].expanded;
           persist();
@@ -675,6 +733,7 @@
         const payload = await response.json();
         if (payload.data?.items) {
           Object.assign(state, payload.data.items);
+          applyCatalogDefaults();
           const prefs = payload.data.preferences || {};
           if (["current", "archived", "all"].includes(prefs.archive)) archiveFilter.value = prefs.archive;
           if (["active", "all", "strong", "medium", "rejected"].includes(prefs.tier)) tierFilter.value = prefs.tier;
@@ -689,6 +748,7 @@
           localStorage.setItem(STORE, JSON.stringify(state));
           setSyncStatus("синхронизировано");
           render();
+          persist();
         } else {
           setSyncStatus("синхронизировано");
           persist();
