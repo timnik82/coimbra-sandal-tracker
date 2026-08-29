@@ -290,9 +290,8 @@
 
     @media (max-width: 760px) {
       header { padding-top: 34px; }
-      .header-topline { align-items: flex-start; }
-      .header-setting > span { display: none; }
-      .header-actions { align-items: flex-end; flex-direction: column-reverse; }
+      .header-topline { align-items: flex-start; flex-wrap: wrap; }
+      .header-actions { align-items: center; flex-direction: row; margin-left: auto; }
       .account-status { font-size: .63rem; }
       .journal-entry { grid-template-columns: 1fr 1fr; }
       .journal-query { grid-column: 1 / -1; }
@@ -313,9 +312,8 @@
     <div class="header-topline">
       <p class="eyebrow">Coimbra · EU 46–47 · цель до €100</p>
       <div class="header-actions">
-        <span class="account-status" id="syncStatus" data-state="local" role="status">Личный аккаунт · локально</span>
         <label class="header-setting" for="fontScale">
-          <span>Текст</span>
+          <span>Размер шрифта</span>
           <select id="fontScale" aria-label="Размер текста">
             <option value="13">Мелкий</option>
             <option value="14" selected>Компактный</option>
@@ -323,6 +321,7 @@
             <option value="18">Крупный</option>
           </select>
         </label>
+        <span class="account-status" id="syncStatus" data-state="local" role="status">Локально</span>
       </div>
     </div>
     <h1>Не потерять хорошую пару</h1>
@@ -512,7 +511,7 @@
 
     const esc = (text) => String(text ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
     const setSyncStatus = (label, mode = "online") => {
-      syncStatus.textContent = `Личный аккаунт · ${label}`;
+      syncStatus.textContent = label;
       syncStatus.dataset.state = mode;
     };
     document.getElementById("journalCount").textContent = `${searchLog.length} запуска`;
