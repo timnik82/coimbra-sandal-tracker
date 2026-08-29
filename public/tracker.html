@@ -127,6 +127,7 @@
     }
     .toolbar button:hover { border-color: var(--blue); }
     .count { margin-left: auto; color: var(--muted); font-size: .875rem; }
+    .sync-status { color: var(--green); font-size: .78rem; font-weight: 750; }
 
     .legend { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; }
     .pill { display: inline-flex; align-items: center; gap: 6px; padding: 5px 9px; border-radius: 999px; font-size: .75rem; font-weight: 750; }
@@ -233,6 +234,18 @@
       color: #a6afb5;
     }
     .interest[aria-pressed="true"] { color: var(--orange); border-color: var(--orange); background: #fff6f1; }
+    .archive-button {
+      width: 100%;
+      min-height: 38px;
+      margin-top: 9px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: white;
+      color: var(--muted);
+      cursor: pointer;
+      font-weight: 750;
+    }
+    .archive-button:hover { color: var(--blue-dark); border-color: var(--blue); }
     textarea {
       width: 100%; min-height: 76px; resize: vertical;
       margin-top: 9px; padding: 10px 11px;
@@ -282,6 +295,11 @@
 
   <main class="wrap">
     <div class="toolbar" aria-label="Фильтры списка">
+      <select id="archiveFilter" aria-label="Раздел каталога">
+        <option value="current">Текущие модели</option>
+        <option value="archived">Архивировано</option>
+        <option value="all">Весь каталог</option>
+      </select>
       <select id="tierFilter" aria-label="Фильтр по пригодности">
         <option value="active">Только актуальные</option>
         <option value="all">Все, включая исключённые</option>
@@ -300,6 +318,7 @@
       <button id="interestOnly" type="button" aria-pressed="false">☆ Только интересные</button>
       <button id="exportBtn" type="button">Экспорт заметок</button>
       <button id="resetBtn" type="button">Сбросить отметки</button>
+      <span class="sync-status" id="syncStatus">Локально</span>
       <span class="count" id="count"></span>
     </div>
 
@@ -314,7 +333,7 @@
   </main>
 
   <footer class="wrap">
-    Состояние списка сохраняется автоматически в браузере на этом компьютере. Цены и наличие меняются; карточка фиксирует только то, что было найдено в этой сессии. Амортизация обуви не гарантирует уменьшения боли в коленях — окончательное решение лучше принимать после примерки и ходьбы.
+    На опубликованном сайте отметки синхронизируются с приватной учётной записью; браузерное сохранение остаётся резервной копией. Цены и наличие меняются; карточка фиксирует только то, что было найдено в этой сессии. Амортизация обуви не гарантирует уменьшения боли в коленях — окончательное решение лучше принимать после примерки и ходьбы.
   </footer>
 
   <script>
@@ -407,28 +426,58 @@
     const saved = JSON.parse(localStorage.getItem(STORE) || "{}");
     const state = { ...saved };
     const grid = document.getElementById("grid");
+    const archiveFilter = document.getElementById("archiveFilter");
     const tierFilter = document.getElementById("tierFilter");
     const statusFilter = document.getElementById("statusFilter");
     const fontScale = document.getElementById("fontScale");
     const interestOnly = document.getElementById("interestOnly");
+    const syncStatus = document.getElementById("syncStatus");
     let onlyInteresting = false;
+    let remoteSaveTimer;
 
     const savedFontScale = localStorage.getItem("coimbra-sandal-font-scale") || "14";
     fontScale.value = savedFontScale;
     document.documentElement.style.fontSize = `${savedFontScale}px`;
 
     const esc = (text) => String(text ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
-    const persist = () => localStorage.setItem(STORE, JSON.stringify(state));
+    const preferences = () => ({
+      archive: archiveFilter.value,
+      tier: tierFilter.value,
+      status: statusFilter.value,
+      onlyInteresting,
+      fontScale: fontScale.value
+    });
+    const saveRemote = async () => {
+      if (!location.protocol.startsWith("http")) return;
+      syncStatus.textContent = "Сохраняю…";
+      try {
+        const response = await fetch("/api/state", {
+          method: "PUT",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ items: state, preferences: preferences() })
+        });
+        syncStatus.textContent = response.ok ? "Сохранено" : "Только локально";
+      } catch {
+        syncStatus.textContent = "Только локально";
+      }
+    };
+    const persist = () => {
+      localStorage.setItem(STORE, JSON.stringify(state));
+      clearTimeout(remoteSaveTimer);
+      remoteSaveTimer = setTimeout(saveRemote, 550);
+    };
     const tierColor = tier => tier === "strong" ? "#42c5d7" : tier === "medium" ? "#f0be52" : "#d9a1a1";
     const tierLabel = tier => tier === "strong" ? "Сильная пена" : tier === "medium" ? "Средняя / проверяем" : "Исключено";
 
     function render() {
       const tier = tierFilter.value;
       const status = statusFilter.value;
+      const archive = archiveFilter.value;
       const visible = products.filter(p => {
         const item = state[p.id] || { status: "unseen", interest: false, note: "" };
         const tierOk = tier === "all" || (tier === "active" ? p.tier !== "rejected" : p.tier === tier);
-        return tierOk && (status === "all" || item.status === status) && (!onlyInteresting || item.interest);
+        const archiveOk = archive === "all" || (archive === "archived" ? item.archived : !item.archived);
+        return archiveOk && tierOk && (status === "all" || item.status === status) && (!onlyInteresting || item.interest);
       });
 
       grid.innerHTML = visible.map(p => {
@@ -462,12 +511,14 @@
                 <button class="interest" type="button" aria-label="Отметить как интересное" aria-pressed="${Boolean(item.interest)}">★</button>
               </div>
               <textarea class="note" aria-label="Заметки о ${esc(p.name)}" placeholder="Размер, посадка, магазин, впечатление…">${esc(item.note)}</textarea>
+              <button class="archive-button" type="button">${item.archived ? "Вернуть из архива" : "Архивировать модель"}</button>
             </div>
           </div>
         </article>`;
       }).join("") || `<div class="empty" style="display:block">По этим фильтрам ничего нет. Измени статус или покажи все варианты.</div>`;
 
-      document.getElementById("count").textContent = `Показано ${visible.length} из ${products.length}`;
+      const archivedCount = products.filter(p => state[p.id]?.archived).length;
+      document.getElementById("count").textContent = `Показано ${visible.length} из ${products.length} · в архиве ${archivedCount}`;
       bindCards();
     }
 
@@ -490,19 +541,28 @@
           if (onlyInteresting && !state[id].interest) render();
         });
         card.querySelector(".note").addEventListener("input", e => { state[id].note = e.target.value; persist(); });
+        card.querySelector(".archive-button").addEventListener("click", () => {
+          state[id].archived = !state[id].archived;
+          state[id].expanded = false;
+          persist();
+          render();
+        });
       });
     }
 
-    tierFilter.addEventListener("change", render);
-    statusFilter.addEventListener("change", render);
+    archiveFilter.addEventListener("change", () => { persist(); render(); });
+    tierFilter.addEventListener("change", () => { persist(); render(); });
+    statusFilter.addEventListener("change", () => { persist(); render(); });
     fontScale.addEventListener("change", () => {
       document.documentElement.style.fontSize = `${fontScale.value}px`;
       localStorage.setItem("coimbra-sandal-font-scale", fontScale.value);
+      persist();
     });
     interestOnly.addEventListener("click", () => {
       onlyInteresting = !onlyInteresting;
       interestOnly.setAttribute("aria-pressed", onlyInteresting);
       interestOnly.textContent = onlyInteresting ? "★ Только интересные" : "☆ Только интересные";
+      persist();
       render();
     });
     document.getElementById("exportBtn").addEventListener("click", () => {
@@ -513,10 +573,53 @@
       a.click(); URL.revokeObjectURL(url);
     });
     document.getElementById("resetBtn").addEventListener("click", () => {
-      if (confirm("Удалить все статусы, звёздочки и заметки?")) { localStorage.removeItem(STORE); location.reload(); }
+      if (confirm("Удалить все статусы, звёздочки, архив и заметки на всех устройствах?")) {
+        Object.keys(state).forEach(key => delete state[key]);
+        archiveFilter.value = "current";
+        tierFilter.value = "active";
+        statusFilter.value = "all";
+        onlyInteresting = false;
+        interestOnly.setAttribute("aria-pressed", "false");
+        interestOnly.textContent = "☆ Только интересные";
+        persist();
+        render();
+      }
     });
 
+    async function loadRemote() {
+      if (!location.protocol.startsWith("http")) return;
+      syncStatus.textContent = "Синхронизация…";
+      try {
+        const response = await fetch("/api/state");
+        if (!response.ok) throw new Error("sync unavailable");
+        const payload = await response.json();
+        if (payload.data?.items) {
+          Object.assign(state, payload.data.items);
+          const prefs = payload.data.preferences || {};
+          if (["current", "archived", "all"].includes(prefs.archive)) archiveFilter.value = prefs.archive;
+          if (["active", "all", "strong", "medium", "rejected"].includes(prefs.tier)) tierFilter.value = prefs.tier;
+          if (["all", "unseen", "reviewed", "try", "buy", "dismissed"].includes(prefs.status)) statusFilter.value = prefs.status;
+          onlyInteresting = Boolean(prefs.onlyInteresting);
+          interestOnly.setAttribute("aria-pressed", onlyInteresting);
+          interestOnly.textContent = onlyInteresting ? "★ Только интересные" : "☆ Только интересные";
+          if (["13", "14", "16", "18"].includes(String(prefs.fontScale))) {
+            fontScale.value = String(prefs.fontScale);
+            document.documentElement.style.fontSize = `${fontScale.value}px`;
+          }
+          localStorage.setItem(STORE, JSON.stringify(state));
+          syncStatus.textContent = "Синхронизировано";
+          render();
+        } else {
+          syncStatus.textContent = "Сохранено";
+          persist();
+        }
+      } catch {
+        syncStatus.textContent = "Только локально";
+      }
+    }
+
     render();
+    loadRemote();
   </script>
 </body>
 </html>
