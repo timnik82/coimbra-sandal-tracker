@@ -321,6 +321,7 @@
     }
     .compare-bar[hidden] { display: none; }
     body:has(.compare-bar:not([hidden])) .grid { padding-bottom: 150px; }
+    body:has(.compare-bar:not([hidden])) footer { padding-bottom: 180px; }
     .compare-summary { min-width: 0; flex: 1; }
     .compare-summary strong { display: block; }
     .compare-summary span { color: var(--muted); font-size: .78rem; }
@@ -485,7 +486,7 @@
     const products = [
       {
         id: "hoka-hopara-2", name: "HOKA Hopara 2", tier: "strong", level: "Сильная", price: "€90,95 найдено; официально около €125", sizes: "46⅔ / 47⅓ выпускаются", rank: 1,
-        lastChecked: "2026-08-29", priceEur: 90.95, retailer: "EXIsport", size46: "size_exists", size47: "size_exists", portugalDelivery: "unknown", coimbraTryOn: "unknown", officeSuitability: "sporty",
+        lastChecked: "2026-08-29", priceEur: 90.95, retailer: "EXIsport", size46: "unknown", size47: "unknown", portugalDelivery: "unknown", coimbraTryOn: "unknown", officeSuitability: "sporty",
         facts: ["EVA topsole и полноценная EVA midsole из сахарного тростника", "Закрытый нос с резиновой защитой и регулируемая пятка", "Независимый тест: поглощение удара примерно на 17,1% лучше среднего"],
         warning: "Цена €90,95 найдена у EXIsport, но конкретный размер и доставка в Португалию ещё не подтверждены.",
         evidenceUrl: "https://www.exisport.eu/hiking-sandals/136965-men-s-sandals-hoka-hopara-2-m-black-black-197634219615.html", source: "Exa · EXIsport · независимый тест RunRepeat"
@@ -684,6 +685,7 @@
     const compareContent = document.getElementById("compareContent");
     let onlyInteresting = false;
     let compareIds = [];
+    let localRevision = 0;
     let remoteSaveTimer;
 
     const sizeStatuses = ["in_stock", "size_exists", "out_of_stock", "unknown"];
@@ -692,6 +694,15 @@
     const officeStatuses = ["good", "acceptable", "sporty", "unknown"];
     const sortStatuses = ["rank", "freshness", "price", "cushioning", "availability"];
     const productIds = new Set(products.map(product => product.id));
+    const safeEvidenceUrl = value => {
+      if (!value) return null;
+      try {
+        const parsed = new URL(value);
+        return ["http:", "https:"].includes(parsed.protocol) ? parsed.href : null;
+      } catch {
+        return null;
+      }
+    };
     const normaliseCompareIds = value => Array.isArray(value)
       ? [...new Set(value.filter(id => productIds.has(id)))].slice(0, 4)
       : [];
@@ -706,7 +717,7 @@
         if (!deliveryStatuses.includes(product.portugalDelivery)) throw new Error(`Некорректная доставка у ${product.id}`);
         if (!tryOnStatuses.includes(product.coimbraTryOn)) throw new Error(`Некорректная примерка у ${product.id}`);
         if (!officeStatuses.includes(product.officeSuitability)) throw new Error(`Некорректный офисный вид у ${product.id}`);
-        if (!(product.evidenceUrl === null || typeof product.evidenceUrl === "string")) throw new Error(`Некорректная ссылка у ${product.id}`);
+        if (!(product.evidenceUrl === null || safeEvidenceUrl(product.evidenceUrl))) throw new Error(`Некорректная ссылка у ${product.id}`);
       });
     };
     validateCatalog();
@@ -779,7 +790,7 @@
       document.documentElement.style.fontSize = `${fontScale.value}px`;
     };
     fontScale.value = localStorage.getItem("coimbra-sandal-font-scale") || "14";
-    applyPreferences(localPreferences);
+    applyPreferences(localPreferences && typeof localPreferences === "object" && !Array.isArray(localPreferences) ? localPreferences : {});
 
     document.getElementById("journalCount").textContent = `${searchLog.length} запуска`;
     document.getElementById("journalList").innerHTML = searchLog.map(entry => `<li class="journal-entry">
@@ -812,6 +823,7 @@
       }
     };
     const persist = () => {
+      localRevision += 1;
       localStorage.setItem(STORE, JSON.stringify(state));
       localStorage.setItem(PREF_STORE, JSON.stringify(preferences()));
       clearTimeout(remoteSaveTimer);
@@ -843,7 +855,7 @@
         <tbody>
           ${rows.map(([label, value]) => `<tr><th scope="row">${label}</th>${selected.map(product => `<td>${esc(value(product))}</td>`).join("")}</tr>`).join("")}
           <tr><th scope="row">Действия</th>${selected.map(product => `<td><div class="compare-actions">
-            ${product.evidenceUrl ? `<a href="${product.evidenceUrl}" target="_blank" rel="noopener">Открыть источник ↗</a>` : `<span>Ссылки нет</span>`}
+            ${safeEvidenceUrl(product.evidenceUrl) ? `<a href="${esc(safeEvidenceUrl(product.evidenceUrl))}" target="_blank" rel="noopener">Открыть источник ↗</a>` : `<span>Ссылки нет</span>`}
             <button type="button" data-try-id="${product.id}" data-selected="${state[product.id]?.status === "try"}">${state[product.id]?.status === "try" ? "✓ Хочу примерить" : "Хочу примерить"}</button>
           </div></td>`).join("")}</tr>
         </tbody>
@@ -876,6 +888,7 @@
         const selected = compareIds.includes(product.id);
         const compareDisabled = !selected && compareIds.length >= 4;
         const checked = freshness(product);
+        const evidenceUrl = safeEvidenceUrl(product.evidenceUrl);
         return `<article class="card" data-id="${product.id}" data-tier="${product.tier}" data-interest="${Boolean(item.interest)}" data-expanded="${expanded}" style="--level-color:${tierColor(product.tier)}">
           <div class="card-header">
             <button class="card-toggle" type="button" aria-expanded="${expanded}" aria-controls="details-${product.id}">
@@ -883,7 +896,7 @@
               <span class="card-title"><h2>${esc(product.name)}</h2><span class="price">${esc(product.price)}</span></span>
               <span class="chevron" aria-hidden="true">⌄</span>
             </button>
-            ${product.evidenceUrl ? `<a class="store-link" href="${product.evidenceUrl}" target="_blank" rel="noopener" aria-label="Открыть страницу ${esc(product.name)}" title="Открыть найденную страницу">↗</a>` : ""}
+            ${evidenceUrl ? `<a class="store-link" href="${esc(evidenceUrl)}" target="_blank" rel="noopener" aria-label="Открыть страницу ${esc(product.name)}" title="Открыть найденную страницу">↗</a>` : ""}
           </div>
           <div class="card-body" id="details-${product.id}">
             <div class="card-main">
@@ -986,7 +999,7 @@
     });
     document.getElementById("closeCompare").addEventListener("click", () => compareDialog.close());
     document.getElementById("exportBtn").addEventListener("click", () => {
-      const payload = products.map(product => ({ model: product.name, ...state[product.id] })).filter(item => item.status || item.note || item.interest);
+      const payload = products.map(product => ({ model: product.name, ...state[product.id] })).filter(item => item.status !== "unseen" || item.note || item.interest);
       const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const link = Object.assign(document.createElement("a"), { href: url, download: "sandal-notes.json" });
@@ -1010,11 +1023,17 @@
 
     async function loadRemote() {
       if (!location.protocol.startsWith("http")) return;
+      const revisionAtRequest = localRevision;
       setSyncStatus("подключаю…", "saving");
       try {
         const response = await fetch("/api/state");
         if (!response.ok) throw new Error("sync unavailable");
         const payload = await response.json();
+        if (localRevision !== revisionAtRequest) {
+          clearTimeout(remoteSaveTimer);
+          await saveRemote();
+          return;
+        }
         if (payload.data?.items) {
           Object.assign(state, payload.data.items);
           applyCatalogDefaults();
