@@ -1,0 +1,522 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Сандалии: журнал поиска</title>
+  <style>
+    :root {
+      --ink: #142635;
+      --muted: #667785;
+      --paper: #f4f8fa;
+      --card: #ffffff;
+      --line: #d7e2e8;
+      --blue: #086d96;
+      --blue-dark: #064d6a;
+      --foam: #c7eff5;
+      --foam-strong: #42c5d7;
+      --orange: #e8713b;
+      --green: #23795b;
+      --red: #a84343;
+      --shadow: 0 12px 32px rgba(20, 50, 68, .08);
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; font-size: 14px; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background:
+        linear-gradient(90deg, rgba(8,109,150,.035) 1px, transparent 1px) 0 0 / 24px 24px,
+        linear-gradient(rgba(8,109,150,.035) 1px, transparent 1px) 0 0 / 24px 24px,
+        var(--paper);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    button, select, textarea, input { font: inherit; }
+    button, select, .link { min-height: 42px; }
+    button:focus-visible, select:focus-visible, textarea:focus-visible, a:focus-visible {
+      outline: 3px solid rgba(232,113,59,.45);
+      outline-offset: 2px;
+    }
+
+    .wrap { width: min(1180px, calc(100% - 32px)); margin: 0 auto; }
+    header { padding: 54px 0 28px; }
+    .header-topline {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 10px;
+    }
+    .eyebrow {
+      margin: 0;
+      color: var(--blue);
+      font: 800 .75rem/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+      letter-spacing: .13em;
+      text-transform: uppercase;
+    }
+    h1 {
+      max-width: 820px;
+      margin: 0;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(2.375rem, 7vw, 4.75rem);
+      font-weight: 500;
+      letter-spacing: -.045em;
+      line-height: .98;
+    }
+    .intro { max-width: 750px; margin: 22px 0 0; color: var(--muted); font-size: 1.125rem; line-height: 1.55; }
+    .header-setting {
+      display: inline-flex;
+      align-items: center;
+      flex: 0 0 auto;
+      gap: 6px;
+      color: var(--muted);
+      font: 700 .72rem/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+      letter-spacing: .03em;
+    }
+    .header-setting select {
+      min-height: 26px;
+      padding: 2px 24px 2px 7px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: white;
+      color: var(--ink);
+      cursor: pointer;
+      font-size: .72rem;
+    }
+
+    .foam-rule {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 16px;
+      align-items: center;
+      margin: 30px 0 0;
+      padding: 16px 18px;
+      border: 1px solid #a9dbe4;
+      border-radius: 15px;
+      background: rgba(199,239,245,.62);
+    }
+    .foam-icon { width: 48px; height: 48px; display: grid; place-items: center; border-radius: 50%; background: var(--foam-strong); font-weight: 900; }
+    .foam-rule strong { display: block; margin-bottom: 3px; }
+    .foam-rule span { color: #45626f; line-height: 1.4; }
+
+    .toolbar {
+      position: sticky;
+      top: 10px;
+      z-index: 5;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      margin: 0 0 26px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: rgba(255,255,255,.9);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(14px);
+    }
+    .toolbar select, .toolbar button {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: white;
+      color: var(--ink);
+      padding: 8px 12px;
+      cursor: pointer;
+    }
+    .toolbar button:hover { border-color: var(--blue); }
+    .count { margin-left: auto; color: var(--muted); font-size: .875rem; }
+
+    .legend { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; }
+    .pill { display: inline-flex; align-items: center; gap: 6px; padding: 5px 9px; border-radius: 999px; font-size: .75rem; font-weight: 750; }
+    .pill.strong { color: #045063; background: #bcebf2; }
+    .pill.medium { color: #76500a; background: #fff0bd; }
+    .pill.unknown { color: #5d6570; background: #e9eef1; }
+    .pill.rejected { color: #823636; background: #f8dcdc; }
+
+    .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; padding-bottom: 70px; }
+    .card {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      background: var(--card);
+      box-shadow: var(--shadow);
+    }
+    .card[data-interest="true"] { border-color: var(--orange); box-shadow: 0 12px 34px rgba(232,113,59,.15); }
+    .card[data-tier="rejected"] { background: #f8fafb; box-shadow: none; }
+    .card::before { content: ""; display: block; height: 8px; background: var(--level-color, var(--line)); }
+    .card-header { display: flex; align-items: center; }
+    .card-toggle {
+      flex: 1 1 auto;
+      min-width: 0;
+      display: flex;
+      gap: 14px;
+      align-items: center;
+      padding: 16px 21px;
+      border: 0;
+      background: transparent;
+      color: var(--ink);
+      text-align: left;
+      cursor: pointer;
+    }
+    .card-toggle:hover { background: rgba(199,239,245,.2); }
+    .card-title { min-width: 0; flex: 1; }
+    .card-title h2 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .chevron {
+      flex: 0 0 auto;
+      width: 28px;
+      color: var(--blue);
+      font-size: 1.3rem;
+      text-align: center;
+      transition: transform .18s ease;
+    }
+    .card[data-expanded="true"] .chevron { transform: rotate(180deg); }
+    .store-link {
+      flex: 0 0 auto;
+      min-height: 32px;
+      min-width: 32px;
+      display: grid;
+      place-items: center;
+      margin-right: 14px;
+      border: 1px solid #a9dbe4;
+      border-radius: 8px;
+      background: rgba(199,239,245,.55);
+      color: var(--blue-dark);
+      text-decoration: none;
+      font-size: 1rem;
+      font-weight: 850;
+      line-height: 1;
+    }
+    .store-link:hover { color: white; border-color: var(--blue); background: var(--blue); }
+    .card-body { display: none; }
+    .card[data-expanded="true"] .card-body { display: block; }
+    .card-main { padding: 0 21px 15px; }
+    .rank {
+      flex: 0 0 auto;
+      width: 38px; height: 38px;
+      display: grid; place-items: center;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      color: var(--blue);
+      font: 800 .875rem ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+    h2 { margin: 0 0 6px; font-size: 1.375rem; line-height: 1.12; }
+    .price { color: var(--blue-dark); font-weight: 800; }
+    .meta { display: flex; flex-wrap: wrap; gap: 7px; margin: 15px 0; }
+    .facts { margin: 0; padding: 0; list-style: none; }
+    .facts li { position: relative; margin: 8px 0; padding-left: 20px; color: #40545f; line-height: 1.4; }
+    .facts li::before { content: "•"; position: absolute; left: 5px; color: var(--blue); font-weight: 900; }
+    .warning { margin: 14px 0 0; padding: 10px 12px; border-left: 3px solid var(--orange); background: #fff7f0; color: #6d4a39; line-height: 1.4; font-size: .875rem; }
+    .source { margin-top: 14px; font-size: .8125rem; color: var(--muted); }
+
+    .controls { margin-top: auto; padding: 15px 21px 20px; border-top: 1px solid var(--line); background: rgba(244,248,250,.65); }
+    .control-row { display: grid; grid-template-columns: 1fr auto; gap: 9px; }
+    .status {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 9px 10px;
+      background: white;
+    }
+    .interest {
+      width: 44px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: white;
+      cursor: pointer;
+      font-size: 21px;
+      color: #a6afb5;
+    }
+    .interest[aria-pressed="true"] { color: var(--orange); border-color: var(--orange); background: #fff6f1; }
+    textarea {
+      width: 100%; min-height: 76px; resize: vertical;
+      margin-top: 9px; padding: 10px 11px;
+      border: 1px solid var(--line); border-radius: 10px;
+      background: white; color: var(--ink); line-height: 1.4;
+    }
+    .empty { display: none; grid-column: 1 / -1; padding: 48px; text-align: center; color: var(--muted); }
+    footer { padding: 0 0 50px; color: var(--muted); font-size: .8125rem; line-height: 1.5; }
+
+    @media (max-width: 760px) {
+      header { padding-top: 34px; }
+      .header-topline { align-items: flex-start; }
+      .header-setting > span { display: none; }
+      .grid { grid-template-columns: 1fr; }
+      .count { width: 100%; margin-left: 0; }
+      .foam-rule { grid-template-columns: 1fr; }
+      .foam-icon { display: none; }
+      .toolbar { position: static; }
+    }
+    @media (prefers-reduced-motion: no-preference) {
+      .card { transition: transform .18s ease, box-shadow .18s ease; }
+      .card:hover { transform: translateY(-2px); }
+    }
+  </style>
+</head>
+<body>
+  <header class="wrap">
+    <div class="header-topline">
+      <p class="eyebrow">Coimbra · EU 46–47 · цель до €100</p>
+      <label class="header-setting" for="fontScale">
+        <span>Текст</span>
+        <select id="fontScale" aria-label="Размер текста">
+          <option value="13">Мелкий</option>
+          <option value="14" selected>Компактный</option>
+          <option value="16">Обычный</option>
+          <option value="18">Крупный</option>
+        </select>
+      </label>
+    </div>
+    <h1>Не потерять хорошую пару</h1>
+    <p class="intro">Все модели из текущего поиска — вместе с тем, что уже известно, что ещё проверить и почему некоторые варианты исключены.</p>
+    <div class="foam-rule">
+      <div class="foam-icon">↕</div>
+      <div><strong>Главное правило: амортизация — обязательна.</strong><span>Засчитывается полноценная промежуточная подошва из EVA, PU или другой пены с подтверждённым поглощением удара. Одна мягкая стелька не считается.</span></div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div class="toolbar" aria-label="Фильтры списка">
+      <select id="tierFilter" aria-label="Фильтр по пригодности">
+        <option value="active">Только актуальные</option>
+        <option value="all">Все, включая исключённые</option>
+        <option value="strong">Сильная амортизация</option>
+        <option value="medium">Средняя / вероятная</option>
+        <option value="rejected">Только исключённые</option>
+      </select>
+      <select id="statusFilter" aria-label="Фильтр по статусу просмотра">
+        <option value="all">Любой статус</option>
+        <option value="unseen">Не просмотрено</option>
+        <option value="reviewed">Просмотрено</option>
+        <option value="try">Хочу примерить</option>
+        <option value="buy">К покупке</option>
+        <option value="dismissed">Не подходит</option>
+      </select>
+      <button id="interestOnly" type="button" aria-pressed="false">☆ Только интересные</button>
+      <button id="exportBtn" type="button">Экспорт заметок</button>
+      <button id="resetBtn" type="button">Сбросить отметки</button>
+      <span class="count" id="count"></span>
+    </div>
+
+    <div class="legend" aria-label="Легенда">
+      <span class="pill strong">Подтверждённая сильная пена</span>
+      <span class="pill medium">Средняя или требует проверки</span>
+      <span class="pill unknown">Наличие/доставка не подтверждены</span>
+      <span class="pill rejected">Исключено</span>
+    </div>
+
+    <section class="grid" id="grid" aria-live="polite"></section>
+  </main>
+
+  <footer class="wrap">
+    Состояние списка сохраняется автоматически в браузере на этом компьютере. Цены и наличие меняются; карточка фиксирует только то, что было найдено в этой сессии. Амортизация обуви не гарантирует уменьшения боли в коленях — окончательное решение лучше принимать после примерки и ходьбы.
+  </footer>
+
+  <script>
+    const products = [
+      {
+        id: "hoka-hopara-2", name: "HOKA Hopara 2", tier: "strong", level: "Сильная", price: "€90,95 найдено; официально около €125", sizes: "46⅔ / 47⅓ выпускаются", rank: 1,
+        facts: ["EVA topsole и полноценная EVA midsole из сахарного тростника", "Закрытый нос с резиновой защитой и регулируемая пятка", "Независимый тест: поглощение удара примерно на 17,1% лучше среднего"],
+        warning: "Цена €90,95 найдена у EXIsport, но конкретный размер и доставка в Португалию ещё не подтверждены.",
+        url: "https://www.exisport.eu/hiking-sandals/136965-men-s-sandals-hoka-hopara-2-m-black-black-197634219615.html", source: "Exa · EXIsport · независимый тест RunRepeat"
+      },
+      {
+        id: "salomon-techamphibian-5", name: "Salomon Techamphibian 5", tier: "strong", level: "Подтверждённая", price: "€88,95", sizes: "46 / 46⅔ показаны в наличии", rank: 2,
+        facts: ["EnergyCell: EVA-промежуточная подошва 26,7 / 17,9 мм", "Продавец прямо указывает shock absorption", "Закрытый усиленный нос, регулируемая и складывающаяся пятка", "По виду ближе к летней обуви — пригоднее для работы"],
+        warning: "Нужно проверить доставку Sportisimo в Коимбру и удобство складывающейся пятки.",
+        url: "https://www.sportisimo.com/salomon/techamphibian-5/907681/", source: "Exa · Sportisimo · Salomon"
+      },
+      {
+        id: "keen-hyperport-h2", name: "KEEN Hyperport H2", tier: "medium", level: "Средняя по тесту", price: "€95,09 находилось; обычно €120–150", sizes: "46 / 47 выпускаются", rank: 3,
+        facts: ["Экстра-толстая injected-foam midsole и ударопоглощающая стелька", "Защитный нос и хорошая фиксация стопы", "Независимый тест: среднее поглощение удара, но высокий возврат энергии"],
+        warning: "About You показывал €95,09, однако наличие 46/47 не было подтверждено. Маркетинговое «max cushion» оказалось сильнее лабораторного результата.",
+        url: "https://www.keenfootwear.de/en/products/mens-hyperport-h2-brindle-black", source: "Parallel + Exa · KEEN · RunRepeat"
+      },
+      {
+        id: "teva-xlt3-ct", name: "Teva Hurricane XLT3 Closed Toe", tier: "medium", level: "Средняя по тесту", price: "€104,72 + доставка", sizes: "46 / 47 выпускаются", rank: 4,
+        facts: ["Формованная EVA midsole; около 33,2 мм под пяткой", "Закрытый нос, задняя и передняя регулировка", "Лабораторно амортизация средняя; платформа стабильная"],
+        warning: "Немного выше бюджета. Текущие 46/47 на Outnorth ещё не подтверждены.",
+        url: "https://www.outnorth.com/int/brands/teva/teva-men-s-hurricane-xlt3-closed-toe-sandal-bison-multi-FS688424", source: "Exa · Outnorth · RunRepeat"
+      },
+      {
+        id: "merrell-hydro-moc-at", name: "Merrell Hydro Moc AT Cage", tier: "medium", level: "Вероятно хорошая", price: "около £83 на распродаже", sizes: "46 / 47 существуют", rank: 5,
+        facts: ["Полноценная FloatPro Foam midsole", "Закрытый EVA-корпус, задняя стропа и затяжка", "Лёгкая водостойкая конструкция с цепкой подошвой"],
+        warning: "Найденная европейская карточка BSTN распродана во всех размерах. Очень спортивный вид для офиса.",
+        url: "https://www.bstn.com/uk_en/p/merrell-1-trl-hydro-moc-at-cage-se-boulder-j005991-0302085", source: "Exa · BSTN · Merrell"
+      },
+      {
+        id: "keen-hyperport-leather", name: "KEEN Hyperport Fisherman Leather", tier: "medium", level: "Конструкция подтверждена", price: "€87,49 находилось; официально €150", sizes: "46 / 47 выпускаются", rank: 6,
+        facts: ["Injected-foam midsole и shock-absorbing foam insole", "Закрытая fisherman-конструкция и регулируемая пятка", "Более спокойный кожаный вид для работы"],
+        warning: "В El Corte Inglés размер 46 был распродан, наличие 47 осталось неоднозначным. Нужен новый поиск остатков.",
+        url: "https://keenfootwear.fi/products/mens-hyperport-fisherman-leather_1030722", source: "Parallel + Exa · El Corte Inglés · KEEN"
+      },
+      {
+        id: "keen-newport-h2", name: "KEEN Newport H2", tier: "medium", level: "Недостаточная по тесту", price: "около €120", sizes: "46 встречался", rank: 7,
+        facts: ["Полноценная промежуточная подошва и закрытый защитный нос", "Надёжная фиксация и широкий носок", "По независимому сравнению поглощение удара низкое"],
+        warning: "Выше бюджета и слабее Hopara 2 по амортизации. Оставлен только для сравнения и возможной примерки.",
+        url: "https://runrepeat.com/guides/best-closed-toe-hiking-sandals", source: "Parallel + Exa · RunRepeat"
+      },
+      {
+        id: "ecco-offroad", name: "ECCO Offroad", tier: "rejected", level: "Исключено", price: "€84–90 находилось", sizes: "46 / 47 показывались", rank: 8,
+        facts: ["PU/FLUIDFORM может давать хорошую амортизацию", "Однако найденная версия имеет открытый нос"],
+        warning: "Не выполняет требование закрытого или хорошо защищённого носа.", source: "Предыдущий поиск · Boozt"
+      },
+      {
+        id: "pagonis-fisherman", name: "Pagonis Fisherman Closed Toe", tier: "rejected", level: "Исключено", price: "€80", sizes: "46", rank: 9,
+        facts: ["Закрытый нос, пятка и офисный кожаный вид", "Только мягкая стелька и тонкая EVA/резина"],
+        warning: "Нет полноценной амортизирующей промежуточной подошвы.", url: "https://greek-sandals.com/leather-products/men-sandals/mens-fisherman-sandals-closed-toe/", source: "Parallel"
+      },
+      {
+        id: "pagonis-almiro", name: "Pagonis Almiro", tier: "rejected", level: "Исключено", price: "€70", sizes: "46", rank: 10,
+        facts: ["Закрытая кожаная fisherman-конструкция", "Подошва тонкая, подтверждённой ударной амортизации нет"],
+        warning: "Не проходит обязательный критерий амортизации.", url: "https://greek-sandals.com/leather-products/men-sandals/mens-closed-toe-sandals", source: "Parallel"
+      },
+      {
+        id: "geox-strada", name: "Geox Strada Closed Toe", tier: "rejected", level: "Исключено", price: "около €55–70", sizes: "46; 47 в линейке", rank: 11,
+        facts: ["Закрытый нос и фиксация пятки", "Лёгкая подошва, но толстая ударопоглощающая пена не подтверждена"],
+        warning: "Дышащая и удобная — недостаточно: требование амортизации не доказано.", url: "https://www.geox.com/en-GB/athletic_closed_toe_sandals-light_taupe-strada_man-U4524C000EKC6738.html", source: "Parallel"
+      },
+      {
+        id: "jerusalem-barak", name: "Jerusalem Sandals Barak", tier: "rejected", level: "Исключено", price: "$83,95 + импорт", sizes: "46 / 47", rank: 12,
+        facts: ["Закрытый нос, задний ремень, спокойный кожаный вид", "Заявленная cushioned outsole без доказательства полноценной midsole"],
+        warning: "Амортизация недостаточно подтверждена; магазин вне ЕС.", url: "https://jerusalemsandals.com/collections/fisherman-sandals-mens", source: "Parallel"
+      },
+      {
+        id: "skechers-motley", name: "Skechers Arch Fit Motley SD – Rigel", tier: "rejected", level: "Исключено", price: "€41,97", sizes: "не подтверждены", rank: 13,
+        facts: ["Arch Fit и мягкая подошва", "Открытая трёхточечная модель без фиксации пятки"],
+        warning: "Ложное совпадение поиска: конструкция не подходит.", url: "https://www.decathlon.pt/homem/sandalias-homem", source: "Parallel · Decathlon"
+      },
+      {
+        id: "quiksilver-monkey", name: "Quiksilver Monkey Caged II", tier: "rejected", level: "Исключено", price: "около €44–55", sizes: "до 47–48 встречаются", rank: 14,
+        facts: ["EVA footbed и съёмная задняя стропа", "Нос недостаточно закрыт; полноценная midsole не доказана"],
+        warning: "Не проходит сразу два обязательных критерия.", url: "https://www.bergfreunde.eu/quiksilver-monkey-caged-ii-sandals/", source: "Parallel"
+      },
+      {
+        id: "satorisan-benirras", name: "Satorisan Benirras", tier: "rejected", level: "Исключено", price: "€140", sizes: "46 / 47", rank: 15,
+        facts: ["Закрытая летняя конструкция и cushioned footbed", "Полноценная ударопоглощающая midsole не подтверждена"],
+        warning: "Выше бюджета и недостаточно доказательств амортизации.", url: "https://eu.satorisan.com/collections/sandalias-cerradas-hombre", source: "Parallel"
+      }
+    ];
+
+    const STORE = "coimbra-sandal-tracker-v1";
+    const saved = JSON.parse(localStorage.getItem(STORE) || "{}");
+    const state = { ...saved };
+    const grid = document.getElementById("grid");
+    const tierFilter = document.getElementById("tierFilter");
+    const statusFilter = document.getElementById("statusFilter");
+    const fontScale = document.getElementById("fontScale");
+    const interestOnly = document.getElementById("interestOnly");
+    let onlyInteresting = false;
+
+    const savedFontScale = localStorage.getItem("coimbra-sandal-font-scale") || "14";
+    fontScale.value = savedFontScale;
+    document.documentElement.style.fontSize = `${savedFontScale}px`;
+
+    const esc = (text) => String(text ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
+    const persist = () => localStorage.setItem(STORE, JSON.stringify(state));
+    const tierColor = tier => tier === "strong" ? "#42c5d7" : tier === "medium" ? "#f0be52" : "#d9a1a1";
+    const tierLabel = tier => tier === "strong" ? "Сильная пена" : tier === "medium" ? "Средняя / проверяем" : "Исключено";
+
+    function render() {
+      const tier = tierFilter.value;
+      const status = statusFilter.value;
+      const visible = products.filter(p => {
+        const item = state[p.id] || { status: "unseen", interest: false, note: "" };
+        const tierOk = tier === "all" || (tier === "active" ? p.tier !== "rejected" : p.tier === tier);
+        return tierOk && (status === "all" || item.status === status) && (!onlyInteresting || item.interest);
+      });
+
+      grid.innerHTML = visible.map(p => {
+        const item = state[p.id] || { status: "unseen", interest: false, note: "" };
+        const expanded = Boolean(item.expanded);
+        return `<article class="card" data-id="${p.id}" data-tier="${p.tier}" data-interest="${Boolean(item.interest)}" data-expanded="${expanded}" style="--level-color:${tierColor(p.tier)}">
+          <div class="card-header">
+            <button class="card-toggle" type="button" aria-expanded="${expanded}" aria-controls="details-${p.id}">
+              <span class="rank">${String(p.rank).padStart(2,"0")}</span>
+              <span class="card-title"><h2>${esc(p.name)}</h2><span class="price">${esc(p.price)}</span></span>
+              <span class="chevron" aria-hidden="true">⌄</span>
+            </button>
+            ${p.url ? `<a class="store-link" href="${p.url}" target="_blank" rel="noopener" aria-label="Открыть страницу ${esc(p.name)}" title="Открыть найденную страницу">↗</a>` : ""}
+          </div>
+          <div class="card-body" id="details-${p.id}">
+            <div class="card-main">
+              <div class="meta"><span class="pill ${p.tier}">${tierLabel(p.tier)}</span><span class="pill unknown">${esc(p.sizes)}</span></div>
+              <ul class="facts">${p.facts.map(f => `<li>${esc(f)}</li>`).join("")}</ul>
+              <p class="warning">${esc(p.warning)}</p>
+              <p class="source">Источник поиска: ${esc(p.source)}</p>
+            </div>
+            <div class="controls">
+              <div class="control-row">
+                <select class="status" aria-label="Статус ${esc(p.name)}">
+                  <option value="unseen" ${item.status === "unseen" ? "selected" : ""}>Не просмотрено</option>
+                  <option value="reviewed" ${item.status === "reviewed" ? "selected" : ""}>Просмотрено</option>
+                  <option value="try" ${item.status === "try" ? "selected" : ""}>Хочу примерить</option>
+                  <option value="buy" ${item.status === "buy" ? "selected" : ""}>К покупке</option>
+                  <option value="dismissed" ${item.status === "dismissed" ? "selected" : ""}>Не подходит</option>
+                </select>
+                <button class="interest" type="button" aria-label="Отметить как интересное" aria-pressed="${Boolean(item.interest)}">★</button>
+              </div>
+              <textarea class="note" aria-label="Заметки о ${esc(p.name)}" placeholder="Размер, посадка, магазин, впечатление…">${esc(item.note)}</textarea>
+            </div>
+          </div>
+        </article>`;
+      }).join("") || `<div class="empty" style="display:block">По этим фильтрам ничего нет. Измени статус или покажи все варианты.</div>`;
+
+      document.getElementById("count").textContent = `Показано ${visible.length} из ${products.length}`;
+      bindCards();
+    }
+
+    function bindCards() {
+      document.querySelectorAll(".card").forEach(card => {
+        const id = card.dataset.id;
+        state[id] ||= { status: "unseen", interest: false, note: "" };
+        card.querySelector(".card-toggle").addEventListener("click", e => {
+          state[id].expanded = !state[id].expanded;
+          persist();
+          card.dataset.expanded = state[id].expanded;
+          e.currentTarget.setAttribute("aria-expanded", state[id].expanded);
+        });
+        card.querySelector(".status").addEventListener("change", e => { state[id].status = e.target.value; persist(); render(); });
+        card.querySelector(".interest").addEventListener("click", e => {
+          state[id].interest = !state[id].interest;
+          persist();
+          e.currentTarget.setAttribute("aria-pressed", state[id].interest);
+          card.dataset.interest = state[id].interest;
+          if (onlyInteresting && !state[id].interest) render();
+        });
+        card.querySelector(".note").addEventListener("input", e => { state[id].note = e.target.value; persist(); });
+      });
+    }
+
+    tierFilter.addEventListener("change", render);
+    statusFilter.addEventListener("change", render);
+    fontScale.addEventListener("change", () => {
+      document.documentElement.style.fontSize = `${fontScale.value}px`;
+      localStorage.setItem("coimbra-sandal-font-scale", fontScale.value);
+    });
+    interestOnly.addEventListener("click", () => {
+      onlyInteresting = !onlyInteresting;
+      interestOnly.setAttribute("aria-pressed", onlyInteresting);
+      interestOnly.textContent = onlyInteresting ? "★ Только интересные" : "☆ Только интересные";
+      render();
+    });
+    document.getElementById("exportBtn").addEventListener("click", () => {
+      const payload = products.map(p => ({ model: p.name, ...state[p.id] })).filter(x => x.status || x.note || x.interest);
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = Object.assign(document.createElement("a"), { href: url, download: "sandal-notes.json" });
+      a.click(); URL.revokeObjectURL(url);
+    });
+    document.getElementById("resetBtn").addEventListener("click", () => {
+      if (confirm("Удалить все статусы, звёздочки и заметки?")) { localStorage.removeItem(STORE); location.reload(); }
+    });
+
+    render();
+  </script>
+</body>
+</html>
