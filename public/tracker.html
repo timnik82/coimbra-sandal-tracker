@@ -168,6 +168,10 @@
     .pill.medium { color: #76500a; background: #fff0bd; }
     .pill.unknown { color: #5d6570; background: #e9eef1; }
     .pill.rejected { color: #823636; background: #f8dcdc; }
+    .pill.fresh { color: #176348; background: #dff3e9; }
+    .pill.aging { color: #76500a; background: #fff0bd; }
+    .pill.stale { color: #823636; background: #f8dcdc; }
+    .pill.confirmed { color: #176348; background: #dff3e9; }
 
     .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; padding-bottom: 70px; }
     .card {
@@ -249,6 +253,18 @@
     .source { margin-top: 14px; font-size: .8125rem; color: var(--muted); }
 
     .controls { margin-top: auto; padding: 15px 21px 20px; border-top: 1px solid var(--line); background: rgba(244,248,250,.65); }
+    .compare-choice {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 36px;
+      margin-bottom: 9px;
+      color: var(--blue-dark);
+      font-weight: 750;
+      cursor: pointer;
+    }
+    .compare-choice input { width: 18px; height: 18px; accent-color: var(--blue); }
+    .compare-choice:has(input:disabled) { color: var(--muted); cursor: not-allowed; }
     .control-row { display: grid; grid-template-columns: 1fr auto; gap: 9px; }
     .status {
       width: 100%;
@@ -286,6 +302,64 @@
       background: white; color: var(--ink); line-height: 1.4;
     }
     .empty { display: none; grid-column: 1 / -1; padding: 48px; text-align: center; color: var(--muted); }
+    .compare-bar {
+      position: fixed;
+      left: 50%;
+      bottom: max(16px, env(safe-area-inset-bottom));
+      z-index: 12;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: min(720px, calc(100% - 28px));
+      padding: 10px 12px 10px 16px;
+      border: 1px solid #a9dbe4;
+      border-radius: 16px;
+      background: rgba(255,255,255,.96);
+      box-shadow: 0 18px 48px rgba(20,50,68,.2);
+      backdrop-filter: blur(16px);
+      transform: translateX(-50%);
+    }
+    .compare-bar[hidden] { display: none; }
+    body:has(.compare-bar:not([hidden])) .grid { padding-bottom: 150px; }
+    body:has(.compare-bar:not([hidden])) footer { padding-bottom: 180px; }
+    .compare-summary { min-width: 0; flex: 1; }
+    .compare-summary strong { display: block; }
+    .compare-summary span { color: var(--muted); font-size: .78rem; }
+    .compare-bar button,
+    .compare-dialog button {
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      background: white;
+      color: var(--ink);
+      padding: 7px 11px;
+      cursor: pointer;
+    }
+    .compare-bar .primary { border-color: var(--blue); background: var(--blue); color: white; font-weight: 800; }
+    .compare-bar .primary:disabled { border-color: var(--line); background: #e9eef1; color: var(--muted); cursor: not-allowed; }
+    .compare-dialog {
+      width: min(1080px, calc(100% - 28px));
+      max-height: min(820px, calc(100dvh - 32px));
+      padding: 0;
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      background: white;
+      color: var(--ink);
+      box-shadow: 0 24px 80px rgba(20,50,68,.28);
+    }
+    .compare-dialog::backdrop { background: rgba(20,38,53,.45); backdrop-filter: blur(3px); }
+    .compare-dialog-shell { display: flex; flex-direction: column; max-height: inherit; }
+    .compare-dialog-header { display: flex; align-items: center; gap: 14px; padding: 16px 18px; border-bottom: 1px solid var(--line); }
+    .compare-dialog-header h2 { flex: 1; margin: 0; }
+    .compare-table-wrap { overflow: auto; overscroll-behavior: contain; padding: 0 18px 18px; }
+    .compare-table { width: 100%; min-width: 720px; border-collapse: collapse; font-size: .875rem; }
+    .compare-table th, .compare-table td { padding: 11px 12px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+    .compare-table thead th { position: sticky; top: 0; z-index: 2; background: white; color: var(--blue-dark); }
+    .compare-table th[scope="row"] { position: sticky; left: 0; z-index: 1; width: 160px; background: white; }
+    .compare-table .model-heading { min-width: 170px; }
+    .compare-actions { display: grid; gap: 7px; }
+    .compare-actions a { color: var(--blue-dark); font-weight: 800; }
+    .compare-actions button { min-height: 34px; width: fit-content; }
+    .compare-actions button[data-selected="true"] { color: var(--green); border-color: #acd5c7; background: #edf8f3; }
     footer { padding: 0 0 50px; color: var(--muted); font-size: .8125rem; line-height: 1.5; }
 
     @media (max-width: 760px) {
@@ -300,6 +374,9 @@
       .foam-rule { grid-template-columns: 1fr; }
       .foam-icon { display: none; }
       .toolbar { position: static; }
+      .compare-bar { align-items: stretch; flex-wrap: wrap; }
+      .compare-summary { width: 100%; flex-basis: 100%; }
+      .compare-bar button { flex: 1; }
     }
     @media (prefers-reduced-motion: no-preference) {
       .card { transition: transform .18s ease, box-shadow .18s ease; }
@@ -354,6 +431,13 @@
         <option value="buy">К покупке</option>
         <option value="dismissed">Не подходит</option>
       </select>
+      <select id="sortFilter" aria-label="Сортировка моделей">
+        <option value="rank">По исходному рейтингу</option>
+        <option value="freshness">Сначала недавно проверенные</option>
+        <option value="price">Сначала дешевле</option>
+        <option value="cushioning">По амортизации</option>
+        <option value="availability">По доступности</option>
+      </select>
       <button id="interestOnly" type="button" aria-pressed="false">☆ Только интересные</button>
       <button id="exportBtn" type="button">Экспорт заметок</button>
       <button id="resetBtn" type="button">Сбросить отметки</button>
@@ -379,132 +463,175 @@
     На опубликованном сайте отметки синхронизируются с приватной учётной записью; браузерное сохранение остаётся резервной копией. Цены и наличие меняются; карточка фиксирует только то, что было найдено в этой сессии. Амортизация обуви не гарантирует уменьшения боли в коленях — окончательное решение лучше принимать после примерки и ходьбы.
   </footer>
 
+  <aside class="compare-bar" id="compareBar" role="status" aria-live="polite" hidden>
+    <div class="compare-summary">
+      <strong id="compareCount">Выбрано 0 из 4</strong>
+      <span id="compareHint">Добавьте минимум 2 модели</span>
+    </div>
+    <button id="clearCompare" type="button">Очистить</button>
+    <button class="primary" id="openCompare" type="button" disabled>Сравнить</button>
+  </aside>
+
+  <dialog class="compare-dialog" id="compareDialog" aria-labelledby="compareTitle">
+    <div class="compare-dialog-shell">
+      <header class="compare-dialog-header">
+        <h2 id="compareTitle">Сравнение моделей</h2>
+        <button id="closeCompare" type="button" aria-label="Закрыть сравнение">Закрыть</button>
+      </header>
+      <div class="compare-table-wrap" id="compareContent"></div>
+    </div>
+  </dialog>
+
   <script>
     const products = [
       {
         id: "hoka-hopara-2", name: "HOKA Hopara 2", tier: "strong", level: "Сильная", price: "€90,95 найдено; официально около €125", sizes: "46⅔ / 47⅓ выпускаются", rank: 1,
+        lastChecked: "2026-08-29", priceEur: 90.95, retailer: "EXIsport", size46: "unknown", size47: "unknown", portugalDelivery: "unknown", coimbraTryOn: "unknown", officeSuitability: "sporty",
         facts: ["EVA topsole и полноценная EVA midsole из сахарного тростника", "Закрытый нос с резиновой защитой и регулируемая пятка", "Независимый тест: поглощение удара примерно на 17,1% лучше среднего"],
         warning: "Цена €90,95 найдена у EXIsport, но конкретный размер и доставка в Португалию ещё не подтверждены.",
-        url: "https://www.exisport.eu/hiking-sandals/136965-men-s-sandals-hoka-hopara-2-m-black-black-197634219615.html", source: "Exa · EXIsport · независимый тест RunRepeat"
+        evidenceUrl: "https://www.exisport.eu/hiking-sandals/136965-men-s-sandals-hoka-hopara-2-m-black-black-197634219615.html", source: "Exa · EXIsport · независимый тест RunRepeat"
       },
       {
         id: "salomon-techamphibian-5", name: "Salomon Techamphibian 5", tier: "strong", level: "Подтверждённая", price: "€88,95", sizes: "46 / 46⅔ показаны в наличии", rank: 2,
+        lastChecked: "2026-08-29", priceEur: 88.95, retailer: "Sportisimo", size46: "in_stock", size47: "unknown", portugalDelivery: "unknown", coimbraTryOn: "unknown", officeSuitability: "acceptable",
         facts: ["EnergyCell: EVA-промежуточная подошва 26,7 / 17,9 мм", "Продавец прямо указывает shock absorption", "Закрытый усиленный нос, регулируемая и складывающаяся пятка", "По виду ближе к летней обуви — пригоднее для работы"],
         warning: "Нужно проверить доставку Sportisimo в Коимбру и удобство складывающейся пятки.",
-        url: "https://www.sportisimo.com/salomon/techamphibian-5/907681/", source: "Exa · Sportisimo · Salomon"
+        evidenceUrl: "https://www.sportisimo.com/salomon/techamphibian-5/907681/", source: "Exa · Sportisimo · Salomon"
       },
       {
         id: "keen-hyperport-h2", name: "KEEN Hyperport H2", tier: "medium", level: "Средняя по тесту", price: "€95,09 находилось; обычно €120–150", sizes: "46 / 47 выпускаются", rank: 3,
+        lastChecked: "2026-08-29", priceEur: 95.09, retailer: "About You", size46: "size_exists", size47: "size_exists", portugalDelivery: "unknown", coimbraTryOn: "unknown", officeSuitability: "sporty",
         facts: ["Экстра-толстая injected-foam midsole и ударопоглощающая стелька", "Защитный нос и хорошая фиксация стопы", "Независимый тест: среднее поглощение удара, но высокий возврат энергии"],
         warning: "About You показывал €95,09, однако наличие 46/47 не было подтверждено. Маркетинговое «max cushion» оказалось сильнее лабораторного результата.",
-        url: "https://www.keenfootwear.de/en/products/mens-hyperport-h2-brindle-black", source: "Parallel + Exa · KEEN · RunRepeat"
+        evidenceUrl: "https://www.keenfootwear.de/en/products/mens-hyperport-h2-brindle-black", source: "Parallel + Exa · KEEN · RunRepeat"
       },
       {
         id: "teva-xlt3-ct", name: "Teva Hurricane XLT3 Closed Toe", tier: "medium", level: "Средняя по тесту", price: "€104,72 + доставка", sizes: "46 / 47 выпускаются", rank: 4,
+        lastChecked: "2026-08-29", priceEur: 104.72, retailer: "Outnorth", size46: "size_exists", size47: "size_exists", portugalDelivery: "unknown", coimbraTryOn: "unknown", officeSuitability: "sporty",
         facts: ["Формованная EVA midsole; около 33,2 мм под пяткой", "Закрытый нос, задняя и передняя регулировка", "Лабораторно амортизация средняя; платформа стабильная"],
         warning: "Немного выше бюджета. Текущие 46/47 на Outnorth ещё не подтверждены.",
-        url: "https://www.outnorth.com/int/brands/teva/teva-men-s-hurricane-xlt3-closed-toe-sandal-bison-multi-FS688424", source: "Exa · Outnorth · RunRepeat"
+        evidenceUrl: "https://www.outnorth.com/int/brands/teva/teva-men-s-hurricane-xlt3-closed-toe-sandal-bison-multi-FS688424", source: "Exa · Outnorth · RunRepeat"
       },
       {
         id: "merrell-hydro-moc-at", name: "Merrell Hydro Moc AT Cage", tier: "medium", level: "Вероятно хорошая", price: "около £83 на распродаже", sizes: "46 / 47 существуют", rank: 5,
+        lastChecked: "2026-08-29", priceEur: null, retailer: "BSTN", size46: "out_of_stock", size47: "out_of_stock", portugalDelivery: "unknown", coimbraTryOn: "unknown", officeSuitability: "sporty",
         facts: ["Полноценная FloatPro Foam midsole", "Закрытый EVA-корпус, задняя стропа и затяжка", "Лёгкая водостойкая конструкция с цепкой подошвой"],
         warning: "Найденная европейская карточка BSTN распродана во всех размерах. Очень спортивный вид для офиса.",
-        url: "https://www.bstn.com/uk_en/p/merrell-1-trl-hydro-moc-at-cage-se-boulder-j005991-0302085", source: "Exa · BSTN · Merrell"
+        evidenceUrl: "https://www.bstn.com/uk_en/p/merrell-1-trl-hydro-moc-at-cage-se-boulder-j005991-0302085", source: "Exa · BSTN · Merrell"
       },
       {
         id: "keen-hyperport-leather", name: "KEEN Hyperport Fisherman Leather", tier: "medium", level: "Конструкция подтверждена", price: "€87,49 находилось; официально €150", sizes: "46 / 47 выпускаются", rank: 6,
+        lastChecked: "2026-08-29", priceEur: 87.49, retailer: "El Corte Inglés", size46: "out_of_stock", size47: "unknown", portugalDelivery: "unknown", coimbraTryOn: "unknown", officeSuitability: "good",
         facts: ["Injected-foam midsole и shock-absorbing foam insole", "Закрытая fisherman-конструкция и регулируемая пятка", "Более спокойный кожаный вид для работы"],
         warning: "В El Corte Inglés размер 46 был распродан, наличие 47 осталось неоднозначным. Нужен новый поиск остатков.",
-        url: "https://keenfootwear.fi/products/mens-hyperport-fisherman-leather_1030722", source: "Parallel + Exa · El Corte Inglés · KEEN"
+        evidenceUrl: "https://keenfootwear.fi/products/mens-hyperport-fisherman-leather_1030722", source: "Parallel + Exa · El Corte Inglés · KEEN"
       },
       {
         id: "keen-newport-h2", name: "KEEN Newport H2", tier: "medium", level: "Недостаточная по тесту", price: "около €120", sizes: "46 встречался", rank: 7,
+        lastChecked: "2026-08-29", priceEur: null, retailer: null, size46: "size_exists", size47: "unknown", portugalDelivery: "unknown", coimbraTryOn: "unknown", officeSuitability: "sporty",
         facts: ["Полноценная промежуточная подошва и закрытый защитный нос", "Надёжная фиксация и широкий носок", "По независимому сравнению поглощение удара низкое"],
         warning: "Выше бюджета и слабее Hopara 2 по амортизации. Оставлен только для сравнения и возможной примерки.",
-        url: "https://runrepeat.com/guides/best-closed-toe-hiking-sandals", source: "Parallel + Exa · RunRepeat"
+        evidenceUrl: "https://runrepeat.com/guides/best-closed-toe-hiking-sandals", source: "Parallel + Exa · RunRepeat"
       },
       {
         id: "ecco-offroad", name: "ECCO Offroad", tier: "rejected", level: "Исключено", price: "€84–90 находилось", sizes: "46 / 47 показывались", rank: 8,
+        lastChecked: null, priceEur: null, retailer: "Boozt", size46: "size_exists", size47: "size_exists", portugalDelivery: "unknown", coimbraTryOn: "unknown", officeSuitability: "acceptable", evidenceUrl: null,
         facts: ["PU/FLUIDFORM может давать хорошую амортизацию", "Однако найденная версия имеет открытый нос"],
         warning: "Не выполняет требование закрытого или хорошо защищённого носа.", source: "Предыдущий поиск · Boozt"
       },
       {
         id: "pagonis-fisherman", name: "Pagonis Fisherman Closed Toe", tier: "rejected", level: "Исключено", price: "€80", sizes: "46", rank: 9,
+        lastChecked: "2026-08-29", priceEur: 80, retailer: "Pagonis", size46: "size_exists", size47: "unknown", portugalDelivery: "unknown", coimbraTryOn: "unknown", officeSuitability: "good",
         facts: ["Закрытый нос, пятка и офисный кожаный вид", "Только мягкая стелька и тонкая EVA/резина"],
-        warning: "Нет полноценной амортизирующей промежуточной подошвы.", url: "https://greek-sandals.com/leather-products/men-sandals/mens-fisherman-sandals-closed-toe/", source: "Parallel"
+        warning: "Нет полноценной амортизирующей промежуточной подошвы.", evidenceUrl: "https://greek-sandals.com/leather-products/men-sandals/mens-fisherman-sandals-closed-toe/", source: "Parallel"
       },
       {
         id: "pagonis-almiro", name: "Pagonis Almiro", tier: "rejected", level: "Исключено", price: "€70", sizes: "46", rank: 10,
+        lastChecked: "2026-08-29", priceEur: 70, retailer: "Pagonis", size46: "size_exists", size47: "unknown", portugalDelivery: "unknown", coimbraTryOn: "unknown", officeSuitability: "good",
         facts: ["Закрытая кожаная fisherman-конструкция", "Подошва тонкая, подтверждённой ударной амортизации нет"],
-        warning: "Не проходит обязательный критерий амортизации.", url: "https://greek-sandals.com/leather-products/men-sandals/mens-closed-toe-sandals", source: "Parallel"
+        warning: "Не проходит обязательный критерий амортизации.", evidenceUrl: "https://greek-sandals.com/leather-products/men-sandals/mens-closed-toe-sandals", source: "Parallel"
       },
       {
         id: "geox-strada", name: "Geox Strada Closed Toe", tier: "rejected", level: "Исключено", price: "около €55–70", sizes: "46; 47 в линейке", rank: 11,
+        lastChecked: "2026-08-29", priceEur: null, retailer: "Geox", size46: "size_exists", size47: "size_exists", portugalDelivery: "unknown", coimbraTryOn: "unknown", officeSuitability: "acceptable",
         facts: ["Закрытый нос и фиксация пятки", "Лёгкая подошва, но толстая ударопоглощающая пена не подтверждена"],
-        warning: "Дышащая и удобная — недостаточно: требование амортизации не доказано.", url: "https://www.geox.com/en-GB/athletic_closed_toe_sandals-light_taupe-strada_man-U4524C000EKC6738.html", source: "Parallel"
+        warning: "Дышащая и удобная — недостаточно: требование амортизации не доказано.", evidenceUrl: "https://www.geox.com/en-GB/athletic_closed_toe_sandals-light_taupe-strada_man-U4524C000EKC6738.html", source: "Parallel"
       },
       {
         id: "jerusalem-barak", name: "Jerusalem Sandals Barak", tier: "rejected", level: "Исключено", price: "$83,95 + импорт", sizes: "46 / 47", rank: 12,
+        lastChecked: "2026-08-29", priceEur: null, retailer: "Jerusalem Sandals", size46: "size_exists", size47: "size_exists", portugalDelivery: "unknown", coimbraTryOn: "unknown", officeSuitability: "good",
         facts: ["Закрытый нос, задний ремень, спокойный кожаный вид", "Заявленная cushioned outsole без доказательства полноценной midsole"],
-        warning: "Амортизация недостаточно подтверждена; магазин вне ЕС.", url: "https://jerusalemsandals.com/collections/fisherman-sandals-mens", source: "Parallel"
+        warning: "Амортизация недостаточно подтверждена; магазин вне ЕС.", evidenceUrl: "https://jerusalemsandals.com/collections/fisherman-sandals-mens", source: "Parallel"
       },
       {
         id: "skechers-motley", name: "Skechers Arch Fit Motley SD – Rigel", tier: "rejected", level: "Исключено", price: "€41,97", sizes: "не подтверждены", rank: 13,
+        lastChecked: "2026-08-29", priceEur: 41.97, retailer: "Decathlon", size46: "unknown", size47: "unknown", portugalDelivery: "unknown", coimbraTryOn: "unknown", officeSuitability: "acceptable",
         facts: ["Arch Fit и мягкая подошва", "Открытая трёхточечная модель без фиксации пятки"],
-        warning: "Ложное совпадение поиска: конструкция не подходит.", url: "https://www.decathlon.pt/homem/sandalias-homem", source: "Parallel · Decathlon"
+        warning: "Ложное совпадение поиска: конструкция не подходит.", evidenceUrl: "https://www.decathlon.pt/homem/sandalias-homem", source: "Parallel · Decathlon"
       },
       {
         id: "quiksilver-monkey", name: "Quiksilver Monkey Caged II", tier: "rejected", level: "Исключено", price: "около €44–55", sizes: "до 47–48 встречаются", rank: 14,
+        lastChecked: "2026-08-29", priceEur: null, retailer: "Bergfreunde", size46: "size_exists", size47: "size_exists", portugalDelivery: "unknown", coimbraTryOn: "unknown", officeSuitability: "sporty",
         facts: ["EVA footbed и съёмная задняя стропа", "Нос недостаточно закрыт; полноценная midsole не доказана"],
-        warning: "Не проходит сразу два обязательных критерия.", url: "https://www.bergfreunde.eu/quiksilver-monkey-caged-ii-sandals/", source: "Parallel"
+        warning: "Не проходит сразу два обязательных критерия.", evidenceUrl: "https://www.bergfreunde.eu/quiksilver-monkey-caged-ii-sandals/", source: "Parallel"
       },
       {
         id: "satorisan-benirras", name: "Satorisan Benirras", tier: "rejected", level: "Исключено", price: "€140", sizes: "46 / 47", rank: 15,
+        lastChecked: "2026-08-29", priceEur: 140, retailer: "Satorisan", size46: "size_exists", size47: "size_exists", portugalDelivery: "unknown", coimbraTryOn: "unknown", officeSuitability: "good",
         facts: ["Закрытая летняя конструкция и cushioned footbed", "Полноценная ударопоглощающая midsole не подтверждена"],
-        warning: "Выше бюджета и недостаточно доказательств амортизации.", url: "https://eu.satorisan.com/collections/sandalias-cerradas-hombre", source: "Parallel"
+        warning: "Выше бюджета и недостаточно доказательств амортизации.", evidenceUrl: "https://eu.satorisan.com/collections/sandalias-cerradas-hombre", source: "Parallel"
       },
       {
         id: "rieker-25051", name: "Rieker 25051", tier: "rejected", level: "Архив", price: "ориентир €45–75", sizes: "до 46–47 в линейке", rank: 16,
+        lastChecked: null, priceEur: null, retailer: null, size46: "unknown", size47: "unknown", portugalDelivery: "unknown", coimbraTryOn: "unknown", officeSuitability: "unknown", evidenceUrl: null,
         facts: ["Закрытая fisherman-конструкция встречалась в раннем поиске", "Точный европейский продавец и полноценная пенная midsole не подтверждены"],
         warning: "Архивировано до появления проверяемой карточки с амортизацией и доставкой в Португалию.", source: "Parallel · ранний поиск"
       },
       {
         id: "rieker-26761", name: "Rieker 26761", tier: "rejected", level: "Архив", price: "ориентир €45–75", sizes: "до 46–47 в линейке", rank: 17,
+        lastChecked: null, priceEur: null, retailer: null, size46: "unknown", size47: "unknown", portugalDelivery: "unknown", coimbraTryOn: "unknown", officeSuitability: "unknown", evidenceUrl: null,
         facts: ["Упоминалась среди закрытых comfort-сандалий", "Наличие нужного размера и технология амортизации не были подтверждены"],
         warning: "Не возвращать в основной список без прямой товарной страницы и доказательства пенной midsole.", source: "Parallel · ранний поиск"
       },
       {
         id: "rieker-21190", name: "Rieker 21190", tier: "rejected", level: "Архив", price: "ориентир €45–75", sizes: "до 46–47 в линейке", rank: 18,
+        lastChecked: null, priceEur: null, retailer: null, size46: "unknown", size47: "unknown", portugalDelivery: "unknown", coimbraTryOn: "unknown", officeSuitability: "unknown", evidenceUrl: null,
         facts: ["Модель была названа в расширенном поиске comfort-брендов", "Подтверждённого предложения с доставкой в Коимбру найдено не было"],
         warning: "Архивировано как непроверенный кандидат, а не как подходящая покупка.", source: "Parallel · ранний поиск"
       },
       {
         id: "josef-seibel-max-74", name: "Josef Seibel Max 74", tier: "rejected", level: "Архив", price: "выше €100 в найденных предложениях", sizes: "46 / 47 существуют", rank: 19,
+        lastChecked: null, priceEur: null, retailer: null, size46: "size_exists", size47: "size_exists", portugalDelivery: "unknown", coimbraTryOn: "unknown", officeSuitability: "good", evidenceUrl: null,
         facts: ["Закрытая рыбацкая конструкция и comfort-позиционирование", "Найденные предложения были американскими или выше бюджета"],
         warning: "Архивировано: нет подходящего европейского предложения и независимого подтверждения амортизации.", source: "Parallel · ранний поиск"
       },
       {
         id: "josef-seibel-emeric-10", name: "Josef Seibel Emeric 10", tier: "rejected", level: "Архив", price: "выше €100 в найденных предложениях", sizes: "46 / 47 существуют", rank: 20,
+        lastChecked: null, priceEur: null, retailer: null, size46: "size_exists", size47: "size_exists", portugalDelivery: "unknown", coimbraTryOn: "unknown", officeSuitability: "good", evidenceUrl: null,
         facts: ["Фиксация пятки и закрытая comfort-конструкция", "Нужные размеры встречались только в неподходящих по географии или цене предложениях"],
         warning: "Архивировано до появления предложения в ЕС до €100 с доказанной амортизацией.", source: "Parallel · ранний поиск"
       },
       {
         id: "el-naturalista-tabernas", name: "El Naturalista Tabernas", tier: "rejected", level: "Архив", price: "не подтверждена", sizes: "46 / 47 не подтверждены", rank: 21,
+        lastChecked: "2026-08-29", priceEur: null, retailer: null, size46: "unknown", size47: "unknown", portugalDelivery: "unknown", coimbraTryOn: "unknown", officeSuitability: "unknown", evidenceUrl: null,
         facts: ["Проверялась как менее спортивная закрытая альтернатива", "Поиск не подтвердил одновременно размер, цену и полноценную амортизирующую подошву"],
         warning: "Архивировано как неподтверждённый результат расширенного поиска.", source: "Parallel · расширенный поиск"
       },
       {
         id: "columbia-peakfreak-rush", name: "Columbia Peakfreak Rush", tier: "rejected", level: "Архив", price: "не подтверждена", sizes: "46 / 47 не подтверждены", rank: 22,
+        lastChecked: "2026-08-29", priceEur: null, retailer: null, size46: "unknown", size47: "unknown", portugalDelivery: "unknown", coimbraTryOn: "unknown", officeSuitability: "unknown", evidenceUrl: null,
         facts: ["Рассматривалась как закрытая гибридная outdoor-модель", "Подходящая карточка с задней фиксацией, размером и ценой не была подтверждена"],
         warning: "Архивировано, чтобы будущий поиск не принимал название модели за уже проверенную покупку.", source: "Parallel · расширенный поиск"
       },
       {
         id: "ecco-biom-raft", name: "ECCO BIOM Raft", tier: "rejected", level: "Архив", price: "не подтверждена", sizes: "46 / 47 не подтверждены", rank: 23,
+        lastChecked: "2026-08-29", priceEur: null, retailer: null, size46: "unknown", size47: "unknown", portugalDelivery: "unknown", coimbraTryOn: "unknown", officeSuitability: "unknown", evidenceUrl: null,
         facts: ["Попала в поиск как амфибийная модель ECCO", "Не удалось подтвердить актуальное предложение, нужные размеры и обязательную амортизацию"],
         warning: "Архивировано до появления точной европейской товарной страницы.", source: "Exa · расширенный поиск"
       },
       {
         id: "keen-uneek", name: "KEEN Uneek", tier: "rejected", level: "Архив", price: "не проверялась как покупка", sizes: "46 встречался локально", rank: 24,
+        lastChecked: "2026-08-29", priceEur: null, retailer: "Sportino Coimbra", size46: "size_exists", size47: "unknown", portugalDelivery: "unknown", coimbraTryOn: "possible", officeSuitability: "sporty", evidenceUrl: null,
         facts: ["Предлагалась в Sportino Coimbra только для примерки колодки KEEN", "Подошва менее мягкая, чем у Hyperport; это не основной кандидат"],
         warning: "Архивировано как сравнительная модель для примерки, а не рекомендация к покупке.", source: "Локальный поиск · Sportino Coimbra"
       }
@@ -538,17 +665,63 @@
     ];
 
     const STORE = "coimbra-sandal-tracker-v1";
-    const saved = JSON.parse(localStorage.getItem(STORE) || "{}");
-    const state = { ...saved };
+    const PREF_STORE = "coimbra-sandal-tracker-preferences-v1";
+    const readLocalJson = (key, fallback = {}) => {
+      try { return JSON.parse(localStorage.getItem(key) || JSON.stringify(fallback)); }
+      catch { return fallback; }
+    };
+    const state = { ...readLocalJson(STORE) };
+    const localPreferences = readLocalJson(PREF_STORE);
     const grid = document.getElementById("grid");
     const archiveFilter = document.getElementById("archiveFilter");
     const tierFilter = document.getElementById("tierFilter");
     const statusFilter = document.getElementById("statusFilter");
+    const sortFilter = document.getElementById("sortFilter");
     const fontScale = document.getElementById("fontScale");
     const interestOnly = document.getElementById("interestOnly");
     const syncStatus = document.getElementById("syncStatus");
+    const compareBar = document.getElementById("compareBar");
+    const compareDialog = document.getElementById("compareDialog");
+    const compareContent = document.getElementById("compareContent");
     let onlyInteresting = false;
+    let compareIds = [];
+    let localRevision = 0;
     let remoteSaveTimer;
+    let remoteSaveQueue = Promise.resolve();
+
+    const sizeStatuses = ["in_stock", "size_exists", "out_of_stock", "unknown"];
+    const deliveryStatuses = ["confirmed", "unavailable", "unknown"];
+    const tryOnStatuses = ["confirmed", "possible", "unavailable", "unknown"];
+    const officeStatuses = ["good", "acceptable", "sporty", "unknown"];
+    const sortStatuses = ["rank", "freshness", "price", "cushioning", "availability"];
+    const productIds = new Set(products.map(product => product.id));
+    const safeEvidenceUrl = value => {
+      if (!value) return null;
+      try {
+        const parsed = new URL(value);
+        return ["http:", "https:"].includes(parsed.protocol) ? parsed.href : null;
+      } catch {
+        return null;
+      }
+    };
+    const normaliseCompareIds = value => Array.isArray(value)
+      ? [...new Set(value.filter(id => productIds.has(id)))].slice(0, 4)
+      : [];
+
+    const validateCatalog = () => {
+      if (productIds.size !== products.length) throw new Error("В каталоге есть повторяющиеся ID моделей");
+      products.forEach(product => {
+        if (!(product.lastChecked === null || /^\d{4}-\d{2}-\d{2}$/.test(product.lastChecked))) throw new Error(`Некорректная дата у ${product.id}`);
+        if (!(product.priceEur === null || (typeof product.priceEur === "number" && Number.isFinite(product.priceEur)))) throw new Error(`Некорректная цена у ${product.id}`);
+        if (!(product.retailer === null || typeof product.retailer === "string")) throw new Error(`Некорректный магазин у ${product.id}`);
+        if (!sizeStatuses.includes(product.size46) || !sizeStatuses.includes(product.size47)) throw new Error(`Некорректный размер у ${product.id}`);
+        if (!deliveryStatuses.includes(product.portugalDelivery)) throw new Error(`Некорректная доставка у ${product.id}`);
+        if (!tryOnStatuses.includes(product.coimbraTryOn)) throw new Error(`Некорректная примерка у ${product.id}`);
+        if (!officeStatuses.includes(product.officeSuitability)) throw new Error(`Некорректный офисный вид у ${product.id}`);
+        if (!(product.evidenceUrl === null || safeEvidenceUrl(product.evidenceUrl))) throw new Error(`Некорректная ссылка у ${product.id}`);
+      });
+    };
+    validateCatalog();
 
     const defaultItem = product => ({
       status: "unseen",
@@ -562,83 +735,191 @@
     });
     applyCatalogDefaults();
 
-    const savedFontScale = localStorage.getItem("coimbra-sandal-font-scale") || "14";
-    fontScale.value = savedFontScale;
-    document.documentElement.style.fontSize = `${savedFontScale}px`;
-
-    const esc = (text) => String(text ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
+    const esc = text => String(text ?? "").replace(/[&<>"']/g, character => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[character]));
+    const euro = new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR" });
+    const dateFormat = new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+    const sizeLabels = {
+      in_stock: "есть в наличии",
+      size_exists: "размер выпускается",
+      out_of_stock: "нет в наличии",
+      unknown: "неизвестно"
+    };
+    const deliveryLabels = { confirmed: "доставка подтверждена", unavailable: "доставки нет", unknown: "доставка неизвестна" };
+    const tryOnLabels = { confirmed: "примерка подтверждена", possible: "возможна", unavailable: "недоступна", unknown: "неизвестно" };
+    const officeLabels = { good: "подходит", acceptable: "приемлемо", sporty: "спортивный вид", unknown: "неизвестно" };
+    const pillClass = status => status === "in_stock" || status === "confirmed" ? "confirmed" : status === "size_exists" || status === "possible" ? "medium" : status === "out_of_stock" || status === "unavailable" ? "rejected" : "unknown";
+    const tierColor = tier => tier === "strong" ? "#42c5d7" : tier === "medium" ? "#f0be52" : "#d9a1a1";
+    const tierLabel = tier => tier === "strong" ? "Сильная пена" : tier === "medium" ? "Средняя / проверяем" : "Исключено";
+    const freshness = product => {
+      if (!product.lastChecked) return { label: "Дата неизвестна", className: "unknown", sortValue: -Infinity };
+      const checkedAt = new Date(`${product.lastChecked}T00:00:00Z`);
+      const ageDays = Math.max(0, Math.floor((Date.now() - checkedAt.getTime()) / 86400000));
+      const date = dateFormat.format(checkedAt);
+      if (ageDays <= 14) return { label: `Проверено ${date}`, className: "fresh", sortValue: checkedAt.getTime() };
+      if (ageDays <= 45) return { label: `Перепроверить · ${date}`, className: "aging", sortValue: checkedAt.getTime() };
+      return { label: `Устарело · ${date}`, className: "stale", sortValue: checkedAt.getTime() };
+    };
+    const availabilityScore = product => {
+      const sizeScore = { in_stock: 4, size_exists: 2, out_of_stock: 0, unknown: -1 };
+      const deliveryScore = { confirmed: 2, unknown: 0, unavailable: -2 };
+      return sizeScore[product.size46] + sizeScore[product.size47] + deliveryScore[product.portugalDelivery];
+    };
+    const sortProducts = list => [...list].sort((a, b) => {
+      if (sortFilter.value === "freshness") return freshness(b).sortValue - freshness(a).sortValue || a.rank - b.rank;
+      if (sortFilter.value === "price") return (a.priceEur ?? Infinity) - (b.priceEur ?? Infinity) || a.rank - b.rank;
+      if (sortFilter.value === "cushioning") return ({ strong: 0, medium: 1, rejected: 2 }[a.tier] - { strong: 0, medium: 1, rejected: 2 }[b.tier]) || a.rank - b.rank;
+      if (sortFilter.value === "availability") return availabilityScore(b) - availabilityScore(a) || a.rank - b.rank;
+      return a.rank - b.rank;
+    });
     const setSyncStatus = (label, mode = "online") => {
       syncStatus.textContent = label;
       syncStatus.dataset.state = mode;
     };
+    const setInterestButton = () => {
+      interestOnly.setAttribute("aria-pressed", onlyInteresting);
+      interestOnly.textContent = onlyInteresting ? "★ Только интересные" : "☆ Только интересные";
+    };
+    const applyPreferences = prefs => {
+      if (["current", "archived", "all"].includes(prefs.archive)) archiveFilter.value = prefs.archive;
+      if (["active", "all", "strong", "medium", "rejected"].includes(prefs.tier)) tierFilter.value = prefs.tier;
+      if (["all", "unseen", "reviewed", "try", "buy", "dismissed"].includes(prefs.status)) statusFilter.value = prefs.status;
+      if (sortStatuses.includes(prefs.sortBy)) sortFilter.value = prefs.sortBy;
+      if (typeof prefs.onlyInteresting === "boolean") onlyInteresting = prefs.onlyInteresting;
+      compareIds = normaliseCompareIds(prefs.compareIds);
+      if (["13", "14", "16", "18"].includes(String(prefs.fontScale))) fontScale.value = String(prefs.fontScale);
+      setInterestButton();
+      document.documentElement.style.fontSize = `${fontScale.value}px`;
+    };
+    fontScale.value = localStorage.getItem("coimbra-sandal-font-scale") || "14";
+    applyPreferences(localPreferences && typeof localPreferences === "object" && !Array.isArray(localPreferences) ? localPreferences : {});
+
     document.getElementById("journalCount").textContent = `${searchLog.length} запуска`;
     document.getElementById("journalList").innerHTML = searchLog.map(entry => `<li class="journal-entry">
       <span class="journal-date">${esc(entry.date)}</span>
       <span class="journal-connector">${esc(entry.connector)}</span>
       <span class="journal-query"><strong>${esc(entry.query)}</strong>${esc(entry.result)}<span class="journal-reason">Отсев: ${esc(entry.rejected)}</span></span>
     </li>`).join("");
+
     const preferences = () => ({
       archive: archiveFilter.value,
       tier: tierFilter.value,
       status: statusFilter.value,
+      sortBy: sortFilter.value,
       onlyInteresting,
+      compareIds: normaliseCompareIds(compareIds),
       fontScale: fontScale.value
     });
-    const saveRemote = async () => {
-      if (!location.protocol.startsWith("http")) return;
-      setSyncStatus("сохраняю…", "saving");
-      try {
-        const response = await fetch("/api/state", {
-          method: "PUT",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ items: state, preferences: preferences() })
-        });
-        response.ok ? setSyncStatus("синхронизировано") : setSyncStatus("только локально", "local");
-      } catch {
-        setSyncStatus("только локально", "local");
-      }
+    const saveRemote = () => {
+      if (!location.protocol.startsWith("http")) return Promise.resolve();
+      remoteSaveQueue = remoteSaveQueue.then(async () => {
+        setSyncStatus("сохраняю…", "saving");
+        try {
+          const response = await fetch("/api/state", {
+            method: "PUT",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ items: state, preferences: preferences() })
+          });
+          response.ok ? setSyncStatus("синхронизировано") : setSyncStatus("только локально", "local");
+        } catch {
+          setSyncStatus("только локально", "local");
+        }
+      });
+      return remoteSaveQueue;
     };
     const persist = () => {
+      localRevision += 1;
       localStorage.setItem(STORE, JSON.stringify(state));
+      localStorage.setItem(PREF_STORE, JSON.stringify(preferences()));
       clearTimeout(remoteSaveTimer);
       remoteSaveTimer = setTimeout(saveRemote, 550);
     };
-    const tierColor = tier => tier === "strong" ? "#42c5d7" : tier === "medium" ? "#f0be52" : "#d9a1a1";
-    const tierLabel = tier => tier === "strong" ? "Сильная пена" : tier === "medium" ? "Средняя / проверяем" : "Исключено";
+
+    function renderCompareBar() {
+      compareIds = normaliseCompareIds(compareIds);
+      compareBar.hidden = compareIds.length === 0;
+      document.getElementById("compareCount").textContent = `Выбрано ${compareIds.length} из 4`;
+      document.getElementById("compareHint").textContent = compareIds.length < 2 ? "Добавьте ещё одну модель" : "Готово к сравнению";
+      document.getElementById("openCompare").disabled = compareIds.length < 2;
+    }
+
+    function renderCompare() {
+      const selected = compareIds.map(id => products.find(product => product.id === id)).filter(Boolean);
+      const rows = [
+        ["Амортизация", product => `${tierLabel(product.tier)} · ${product.level}`],
+        ["Цена", product => product.priceEur === null ? "Неизвестно" : euro.format(product.priceEur)],
+        ["Размер 46", product => sizeLabels[product.size46]],
+        ["Размер 47", product => sizeLabels[product.size47]],
+        ["Доставка в Португалию", product => deliveryLabels[product.portugalDelivery]],
+        ["Примерка в Коимбре", product => tryOnLabels[product.coimbraTryOn]],
+        ["Для офиса", product => officeLabels[product.officeSuitability]],
+        ["Последняя проверка", product => product.lastChecked ? dateFormat.format(new Date(`${product.lastChecked}T00:00:00Z`)) : "Неизвестно"]
+      ];
+      compareContent.innerHTML = `<table class="compare-table">
+        <thead><tr><th scope="col">Критерий</th>${selected.map(product => `<th class="model-heading" scope="col">${esc(product.name)}</th>`).join("")}</tr></thead>
+        <tbody>
+          ${rows.map(([label, value]) => `<tr><th scope="row">${label}</th>${selected.map(product => `<td>${esc(value(product))}</td>`).join("")}</tr>`).join("")}
+          <tr><th scope="row">Действия</th>${selected.map(product => `<td><div class="compare-actions">
+            ${safeEvidenceUrl(product.evidenceUrl) ? `<a href="${esc(safeEvidenceUrl(product.evidenceUrl))}" target="_blank" rel="noopener">Открыть источник ↗</a>` : `<span>Ссылки нет</span>`}
+            <button type="button" data-try-id="${product.id}" data-selected="${state[product.id]?.status === "try"}">${state[product.id]?.status === "try" ? "✓ Хочу примерить" : "Хочу примерить"}</button>
+          </div></td>`).join("")}</tr>
+        </tbody>
+      </table>`;
+      compareContent.querySelectorAll("[data-try-id]").forEach(button => button.addEventListener("click", () => {
+        const id = button.dataset.tryId;
+        state[id] ||= defaultItem(products.find(product => product.id === id));
+        state[id].status = "try";
+        persist();
+        render();
+        renderCompare();
+      }));
+    }
 
     function render() {
       const tier = tierFilter.value;
       const status = statusFilter.value;
       const archive = archiveFilter.value;
-      const visible = products.filter(p => {
-        const item = state[p.id] || defaultItem(p);
-        const tierOk = tier === "all" || (tier === "active" ? p.tier !== "rejected" : p.tier === tier);
+      const filtered = products.filter(product => {
+        const item = state[product.id] || defaultItem(product);
+        const tierOk = tier === "all" || (tier === "active" ? product.tier !== "rejected" : product.tier === tier);
         const archiveOk = archive === "all" || (archive === "archived" ? item.archived : !item.archived);
         return archiveOk && tierOk && (status === "all" || item.status === status) && (!onlyInteresting || item.interest);
       });
+      const visible = sortProducts(filtered);
 
-      grid.innerHTML = visible.map(p => {
-        const item = state[p.id] || defaultItem(p);
+      grid.innerHTML = visible.map(product => {
+        const item = state[product.id] || defaultItem(product);
         const expanded = Boolean(item.expanded);
-        return `<article class="card" data-id="${p.id}" data-tier="${p.tier}" data-interest="${Boolean(item.interest)}" data-expanded="${expanded}" style="--level-color:${tierColor(p.tier)}">
+        const selected = compareIds.includes(product.id);
+        const compareDisabled = !selected && compareIds.length >= 4;
+        const checked = freshness(product);
+        const evidenceUrl = safeEvidenceUrl(product.evidenceUrl);
+        return `<article class="card" data-id="${product.id}" data-tier="${product.tier}" data-interest="${Boolean(item.interest)}" data-expanded="${expanded}" style="--level-color:${tierColor(product.tier)}">
           <div class="card-header">
-            <button class="card-toggle" type="button" aria-expanded="${expanded}" aria-controls="details-${p.id}">
-              <span class="rank">${String(p.rank).padStart(2,"0")}</span>
-              <span class="card-title"><h2>${esc(p.name)}</h2><span class="price">${esc(p.price)}</span></span>
+            <button class="card-toggle" type="button" aria-expanded="${expanded}" aria-controls="details-${product.id}">
+              <span class="rank">${String(product.rank).padStart(2,"0")}</span>
+              <span class="card-title"><h2>${esc(product.name)}</h2><span class="price">${esc(product.price)}</span></span>
               <span class="chevron" aria-hidden="true">⌄</span>
             </button>
-            ${p.url ? `<a class="store-link" href="${p.url}" target="_blank" rel="noopener" aria-label="Открыть страницу ${esc(p.name)}" title="Открыть найденную страницу">↗</a>` : ""}
+            ${evidenceUrl ? `<a class="store-link" href="${esc(evidenceUrl)}" target="_blank" rel="noopener" aria-label="Открыть страницу ${esc(product.name)}" title="Открыть найденную страницу">↗</a>` : ""}
           </div>
-          <div class="card-body" id="details-${p.id}">
+          <div class="card-body" id="details-${product.id}">
             <div class="card-main">
-              <div class="meta"><span class="pill ${p.tier}">${tierLabel(p.tier)}</span><span class="pill unknown">${esc(p.sizes)}</span></div>
-              <ul class="facts">${p.facts.map(f => `<li>${esc(f)}</li>`).join("")}</ul>
-              <p class="warning">${esc(p.warning)}</p>
-              <p class="source">Источник поиска: ${esc(p.source)}</p>
+              <div class="meta">
+                <span class="pill ${product.tier}">${tierLabel(product.tier)}</span>
+                <span class="pill ${product.priceEur === null ? "unknown" : "confirmed"}">${product.priceEur === null ? "Цена неизвестна" : euro.format(product.priceEur)}</span>
+                <span class="pill ${pillClass(product.size46)}">46: ${sizeLabels[product.size46]}</span>
+                <span class="pill ${pillClass(product.size47)}">47: ${sizeLabels[product.size47]}</span>
+                <span class="pill ${checked.className}">${esc(checked.label)}</span>
+                <span class="pill ${pillClass(product.portugalDelivery)}">${deliveryLabels[product.portugalDelivery]}</span>
+              </div>
+              <ul class="facts">${product.facts.map(fact => `<li>${esc(fact)}</li>`).join("")}</ul>
+              <p class="warning">${esc(product.warning)}</p>
+              <p class="source">Источник поиска: ${esc(product.source)}${product.retailer ? ` · магазин: ${esc(product.retailer)}` : ""}</p>
             </div>
             <div class="controls">
+              <label class="compare-choice"><input class="compare-checkbox" type="checkbox" ${selected ? "checked" : ""} ${compareDisabled ? "disabled" : ""}><span>Сравнить</span></label>
               <div class="control-row">
-                <select class="status" aria-label="Статус ${esc(p.name)}">
+                <select class="status" aria-label="Статус ${esc(product.name)}">
                   <option value="unseen" ${item.status === "unseen" ? "selected" : ""}>Не просмотрено</option>
                   <option value="reviewed" ${item.status === "reviewed" ? "selected" : ""}>Просмотрено</option>
                   <option value="try" ${item.status === "try" ? "selected" : ""}>Хочу примерить</option>
@@ -647,38 +928,44 @@
                 </select>
                 <button class="interest" type="button" aria-label="Отметить как интересное" aria-pressed="${Boolean(item.interest)}">★</button>
               </div>
-              <textarea class="note" aria-label="Заметки о ${esc(p.name)}" placeholder="Размер, посадка, магазин, впечатление…">${esc(item.note)}</textarea>
+              <textarea class="note" aria-label="Заметки о ${esc(product.name)}" placeholder="Размер, посадка, магазин, впечатление…">${esc(item.note)}</textarea>
               <button class="archive-button" type="button">${item.archived ? "Вернуть из архива" : "Архивировать модель"}</button>
             </div>
           </div>
         </article>`;
       }).join("") || `<div class="empty" style="display:block">По этим фильтрам ничего нет. Измени статус или покажи все варианты.</div>`;
 
-      const archivedCount = products.filter(p => state[p.id]?.archived).length;
+      const archivedCount = products.filter(product => state[product.id]?.archived).length;
       document.getElementById("count").textContent = `Показано ${visible.length} из ${products.length} · в архиве ${archivedCount}`;
       bindCards();
+      renderCompareBar();
     }
 
     function bindCards() {
       document.querySelectorAll(".card").forEach(card => {
         const id = card.dataset.id;
-        const product = products.find(p => p.id === id);
+        const product = products.find(candidate => candidate.id === id);
         state[id] ||= defaultItem(product);
-        card.querySelector(".card-toggle").addEventListener("click", e => {
+        card.querySelector(".card-toggle").addEventListener("click", event => {
           state[id].expanded = !state[id].expanded;
           persist();
           card.dataset.expanded = state[id].expanded;
-          e.currentTarget.setAttribute("aria-expanded", state[id].expanded);
+          event.currentTarget.setAttribute("aria-expanded", state[id].expanded);
         });
-        card.querySelector(".status").addEventListener("change", e => { state[id].status = e.target.value; persist(); render(); });
-        card.querySelector(".interest").addEventListener("click", e => {
+        card.querySelector(".status").addEventListener("change", event => { state[id].status = event.target.value; persist(); render(); });
+        card.querySelector(".interest").addEventListener("click", event => {
           state[id].interest = !state[id].interest;
           persist();
-          e.currentTarget.setAttribute("aria-pressed", state[id].interest);
+          event.currentTarget.setAttribute("aria-pressed", state[id].interest);
           card.dataset.interest = state[id].interest;
           if (onlyInteresting && !state[id].interest) render();
         });
-        card.querySelector(".note").addEventListener("input", e => { state[id].note = e.target.value; persist(); });
+        card.querySelector(".compare-checkbox").addEventListener("change", event => {
+          compareIds = event.target.checked ? normaliseCompareIds([...compareIds, id]) : compareIds.filter(compareId => compareId !== id);
+          persist();
+          render();
+        });
+        card.querySelector(".note").addEventListener("input", event => { state[id].note = event.target.value; persist(); });
         card.querySelector(".archive-button").addEventListener("click", () => {
           state[id].archived = !state[id].archived;
           state[id].expanded = false;
@@ -691,6 +978,7 @@
     archiveFilter.addEventListener("change", () => { persist(); render(); });
     tierFilter.addEventListener("change", () => { persist(); render(); });
     statusFilter.addEventListener("change", () => { persist(); render(); });
+    sortFilter.addEventListener("change", () => { persist(); render(); });
     fontScale.addEventListener("change", () => {
       document.documentElement.style.fontSize = `${fontScale.value}px`;
       localStorage.setItem("coimbra-sandal-font-scale", fontScale.value);
@@ -698,27 +986,40 @@
     });
     interestOnly.addEventListener("click", () => {
       onlyInteresting = !onlyInteresting;
-      interestOnly.setAttribute("aria-pressed", onlyInteresting);
-      interestOnly.textContent = onlyInteresting ? "★ Только интересные" : "☆ Только интересные";
+      setInterestButton();
       persist();
       render();
     });
+    document.getElementById("clearCompare").addEventListener("click", () => {
+      compareIds = [];
+      persist();
+      if (compareDialog.open) compareDialog.close();
+      render();
+    });
+    document.getElementById("openCompare").addEventListener("click", () => {
+      if (compareIds.length < 2) return;
+      renderCompare();
+      compareDialog.showModal();
+    });
+    document.getElementById("closeCompare").addEventListener("click", () => compareDialog.close());
     document.getElementById("exportBtn").addEventListener("click", () => {
-      const payload = products.map(p => ({ model: p.name, ...state[p.id] })).filter(x => x.status || x.note || x.interest);
+      const payload = products.map(product => ({ model: product.name, ...state[product.id] })).filter(item => item.status !== "unseen" || item.note || item.interest);
       const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
       const url = URL.createObjectURL(blob);
-      const a = Object.assign(document.createElement("a"), { href: url, download: "sandal-notes.json" });
-      a.click(); URL.revokeObjectURL(url);
+      const link = Object.assign(document.createElement("a"), { href: url, download: "sandal-notes.json" });
+      link.click(); URL.revokeObjectURL(url);
     });
     document.getElementById("resetBtn").addEventListener("click", () => {
-      if (confirm("Удалить все статусы, звёздочки, архив и заметки на всех устройствах?")) {
+      if (confirm("Удалить все статусы, звёздочки, архив, заметки и список сравнения на всех устройствах?")) {
         Object.keys(state).forEach(key => delete state[key]);
+        applyCatalogDefaults();
         archiveFilter.value = "current";
         tierFilter.value = "active";
         statusFilter.value = "all";
+        sortFilter.value = "rank";
         onlyInteresting = false;
-        interestOnly.setAttribute("aria-pressed", "false");
-        interestOnly.textContent = "☆ Только интересные";
+        compareIds = [];
+        setInterestButton();
         persist();
         render();
       }
@@ -726,26 +1027,21 @@
 
     async function loadRemote() {
       if (!location.protocol.startsWith("http")) return;
+      const revisionAtRequest = localRevision;
       setSyncStatus("подключаю…", "saving");
       try {
         const response = await fetch("/api/state");
         if (!response.ok) throw new Error("sync unavailable");
         const payload = await response.json();
+        if (localRevision !== revisionAtRequest) {
+          return;
+        }
         if (payload.data?.items) {
           Object.assign(state, payload.data.items);
           applyCatalogDefaults();
-          const prefs = payload.data.preferences || {};
-          if (["current", "archived", "all"].includes(prefs.archive)) archiveFilter.value = prefs.archive;
-          if (["active", "all", "strong", "medium", "rejected"].includes(prefs.tier)) tierFilter.value = prefs.tier;
-          if (["all", "unseen", "reviewed", "try", "buy", "dismissed"].includes(prefs.status)) statusFilter.value = prefs.status;
-          onlyInteresting = Boolean(prefs.onlyInteresting);
-          interestOnly.setAttribute("aria-pressed", onlyInteresting);
-          interestOnly.textContent = onlyInteresting ? "★ Только интересные" : "☆ Только интересные";
-          if (["13", "14", "16", "18"].includes(String(prefs.fontScale))) {
-            fontScale.value = String(prefs.fontScale);
-            document.documentElement.style.fontSize = `${fontScale.value}px`;
-          }
+          applyPreferences(payload.data.preferences || {});
           localStorage.setItem(STORE, JSON.stringify(state));
+          localStorage.setItem(PREF_STORE, JSON.stringify(preferences()));
           setSyncStatus("синхронизировано");
           render();
           persist();

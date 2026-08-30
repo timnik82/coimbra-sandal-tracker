@@ -16,6 +16,17 @@ Before starting any new sandal search:
 6. Append every meaningful search run to the `searchLog` array in
    `public/tracker.html`: use the actual date, connector/source, a concise query
    summary, what the run added or confirmed, and the rejection rule applied.
+7. Keep every product's structured availability fields complete. Use an ISO
+   date or `null` for `lastChecked`, a finite EUR number or `null` for
+   `priceEur`, and a string or `null` for `retailer` and `evidenceUrl`.
+8. Size states are `in_stock`, `size_exists`, `out_of_stock`, or `unknown`.
+   Portugal delivery is `confirmed`, `unavailable`, or `unknown`; Coimbra
+   try-on is `confirmed`, `possible`, `unavailable`, or `unknown`; office
+   suitability is `good`, `acceptable`, `sporty`, or `unknown`.
+9. Never infer a structured value from words such as “comfort” or “cushioned”.
+   When the cited source does not confirm a fact, keep it explicitly unknown.
+10. Comparison selections are user state. Keep `compareIds` unique, limited to
+    four existing catalogue IDs, and synchronized with `sortBy` in preferences.
 
 User-specific notes, favourites, filters, statuses, and archive flags are stored
 in D1 through `/api/state`. Browser storage is fallback-only.
